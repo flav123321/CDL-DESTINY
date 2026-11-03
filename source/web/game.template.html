@@ -32,6 +32,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .ovr{font:900 58px/.85 var(--display);color:var(--accent)}
 .who{min-width:0;flex:1 1 200px}
 .who h1{font-size:30px;overflow-wrap:anywhere}
+.wrank{color:var(--accent);font-size:.8em}
+table.palm tfoot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
+table.palm th:first-child,table.palm td:first-child{width:auto}
 .nums{display:flex;flex-wrap:wrap;gap:6px 20px}
 .nums b{display:block;font:800 25px/1 var(--display)}
 nav{display:flex;gap:2px;overflow-x:auto}
@@ -44,7 +47,7 @@ nav button[aria-current=true]{color:var(--fg);border-color:var(--accent)}
 .tick.done{background:var(--panel2);color:var(--fg)}
 .tick.now{background:var(--accent);color:var(--accent-ink);font-weight:700}
 .tick.skip{opacity:.4;text-decoration:line-through}
-@media(max-width:640px){nav button{padding:8px 9px;font-size:17px}.tick{font-size:0}.tick::after{content:attr(data-s);font-size:10px}.tick{height:26px}}
+@media(max-width:640px){nav button{padding:8px 6px;font-size:15.5px}.tick{font-size:0}.tick::after{content:attr(data-s);font-size:10px}.tick{height:26px}}
 
 .cols{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
 .cols>*{min-width:0}
@@ -318,7 +321,8 @@ function endSeason(){
  const v=value();
  S.review={place,of:table.length,lg,kd:k,v,ovr0:S.ovrStart,ovr1:ovr(),earn:m.money-S.moneyStart,awards,teamN:t.n,pts:t.pts};
  m.best=Math.max(m.best||0,ovr());
- m.career.push({y:S.year,t:t.n,lg,place,kd:k,ovr:ovr()});
+ const rec=seasonRecord(S.seasonEvents),rnk=myRank();m.bestRank=Math.min(m.bestRank||rnk,rnk);
+ m.career.push({y:S.year,t:t.n,lg,place,kd:k,ovr:ovr(),rank:rnk,...rec});
  S.offers=buildOffers(v);
  addLog(`Fin de saison : ${ord(place)} sur ${table.length} en ${lgName(lg)}, K/D ${fr(k,2)}.`);
 }
@@ -432,14 +436,14 @@ function hud(){
  const m=S.me,t=myTeam();
  return`<header class="hud">
   <div class="ovr mono" style="font-family:var(--display)" title="Note générale">${Math.round(ovr())}</div>
-  <div class="who"><h1>${esc(m.name)}</h1><div class="dim" style="font-size:14px">${tDot(t.id)}${t.n} · ${lgName(t.lg)} · ${ROLES[m.role].l} · ${m.age} ans · ${esc(m.nat)}</div></div>
+  <div class="who"><h1>${esc(m.name)} <span class="wrank" title="Classement mondial">#${myRank()}</span></h1><div class="dim" style="font-size:14px">${tDot(t.id)}${t.n} · ${lgName(t.lg)} · ${ROLES[m.role].l} · ${m.age} ans · ${esc(m.nat)}</div></div>
   <div class="nums">
    <div><b>${S.year}</b><span class="lab">Saison</span></div>
    <div><b>${m.kn?fr(kd(m),2):"–"}</b><span class="lab">K/D</span></div>
    <div><b>${usd(m.money)}</b><span class="lab">Fictif</span></div>
   </div>
  </header>
- <nav aria-label="Sections">${[["carriere","Carrière"],["equipes","Équipes"],["matchs","Matchs"],["classement","Classement"],["maj","Màj"+((CS.pending||(CS.conflicts||[]).length)?" !":"")]].map(([k,l])=>`<button data-tab="${k}" aria-current="${tab===k}">${l}</button>`).join("")}</nav>`;
+ <nav aria-label="Sections">${[["carriere","Carrière"],["equipes","Équipes"],["matchs","Matchs"],["classement","Classement"],["palmares","Palmarès"],["maj","Màj"+((CS.pending||(CS.conflicts||[]).length)?" !":"")]].map(([k,l])=>`<button data-tab="${k}" aria-current="${tab===k}">${l}</button>`).join("")}</nav>`;
 }
 function track(){
  const qualifSkip=S.step>=9&&!S.seasonEvents.some(e=>e.champs&&e.run);
@@ -524,11 +528,42 @@ function sidePanel(){
 function carriereView(){
  return`<div class="cols"><div class="stack">${track()}${evCard(S.ev)}${flashes()}${newsBox()}${S.step>=9?reviewView():decisionView()}</div>${sidePanel()}</div>${footerCareer()}`;
 }
+/* Classement mondial : note du joueur, ajustée par ses performances de la saison. */
+function worldRanking(){
+ const score=(r,k,n,lg)=>r+(n?(k-1)*(lg==="CDL"?25:12):0);
+ const list=S.teams.flatMap(t=>t.p.map(p=>({n:p.n,f:p.f,t:t.n,id:t.id,kd:p.kn?kd(p):null,s:score(p.r,kd(p),p.kn,t.lg)})));
+ const mt=myTeam();
+ list.push({n:S.me.name,t:mt.n,id:mt.id,me:true,kd:S.me.kn?kd(S.me):null,s:score(ovr(),kd(S.me),S.me.kn,mt.lg)});
+ return list.sort((a,b)=>b.s-a.s);
+}
+const myRank=()=>worldRanking().findIndex(p=>p.me)+1;
+function seasonRecord(evs){
+ let w=0,l=0,ch=0,maj=0;
+ (evs||[]).filter(e=>e.run).forEach(e=>{
+  if(e.run.qual){const[a,b]=e.run.qual.split("-").map(Number);w+=a;l+=b}
+  e.run.series.forEach(x=>{x.w>x.l?w++:l++});
+  if(e.lg==="CDL"&&e.run.rank===1){if(e.champs)ch++;else maj++}
+ });
+ return{w,l,ch,maj};
+}
+function palmaresView(){
+ const m=S.me,rows=m.career.map(c=>{
+  const y=String(c.y),tr=m.trophies.filter(t=>t.t.endsWith(" "+y));
+  return{y:c.y,t:c.t,w:c.w,l:c.l,ch:c.ch!==undefined?c.ch:tr.filter(t=>/^Champion Champs /.test(t.t)).length,maj:c.maj!==undefined?c.maj:tr.filter(t=>/^Vainqueur Major /.test(t.t)).length,rank:c.rank}});
+ if(!S.review&&S.seasonEvents.some(e=>e.run)){const r=seasonRecord(S.seasonEvents);rows.push({y:S.year,t:myTeam().n,now:true,rank:myRank(),...r})}
+ const sum=k=>rows.reduce((a,c)=>a+(c[k]||0),0),old=rows.some(c=>c.w===undefined);
+ const ranks=rows.map(c=>c.rank).filter(Boolean).concat(m.bestRank||[]),best=ranks.length?Math.min(...ranks):myRank();
+ return`<div class="stack"><h2 style="font-size:38px">Palmarès</h2>
+ <div class="tiles"><div><b>${sum("w")}</b><span class="lab">Victoires</span></div><div><b>${sum("l")}</b><span class="lab">Défaites</span></div><div><b>${sum("ch")}</b><span class="lab">Titres Champs</span></div><div><b>${sum("maj")}</b><span class="lab">Majors gagnés</span></div><div><b>#${myRank()}</b><span class="lab">Rang mondial</span></div><div><b>#${best}</b><span class="lab">Meilleur rang</span></div></div>
+ <section class="scroll"><div class="lab">Saison par saison</div>${rows.length?`<table class="palm" style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>V</th><th>D</th><th>Champs</th><th>Majors</th><th>Rang</th></tr></thead><tbody>${rows.slice().reverse().map(c=>`<tr class="${c.now?"mine":""}"><td>${c.y}</td><td>${esc(c.t)}${c.now?' <span class="fic">en cours</span>':""}</td><td>${c.w===undefined?"–":c.w}</td><td>${c.l===undefined?"–":c.l}</td><td>${c.ch}</td><td>${c.maj}</td><td>${c.rank?"#"+c.rank:"–"}</td></tr>`).join("")}</tbody><tfoot><tr><td></td><td>Total</td><td>${sum("w")}</td><td>${sum("l")}</td><td>${sum("ch")}</td><td>${sum("maj")}</td><td></td></tr></tfoot></table>`:'<p class="dim" style="margin-top:4px">Ta première ligne arrive après ton premier tournoi.</p>'}
+ <p class="fine" style="margin-top:6px">V et D comptent les séries jouées avec ton équipe, qualifications comprises. Majors et Champs comptent les titres en CDL.${old?" Les saisons jouées avant cette mise à jour n'ont pas de V et D.":""}</p></section>
+ <section><div class="lab">Trophées</div><div style="margin-top:4px;font-size:15px">${m.trophies.length?m.trophies.slice().reverse().map(x=>`<div>${x.big?"<strong>":""}${esc(x.t)}${x.big?"</strong>":""}</div>`).join(""):'<span class="dim">Rien encore. Le premier trophée changera tout.</span>'}</div></section>
+ </div>`;
+}
 function footerCareer(){
  const m=S.me;
  return`<section class="stack" style="border-top:1px solid var(--line);padding-top:14px">
  <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
- <div><div class="lab">Palmarès</div><div style="margin-top:4px;font-size:15px">${m.trophies.length?m.trophies.slice().reverse().map(x=>`<div>${x.big?"<strong>":""}${esc(x.t)}${x.big?"</strong>":""}</div>`).join(""):'<span class="dim">Rien encore. Le premier trophée changera tout.</span>'}</div></div>
  <div class="scroll"><div class="lab">Parcours</div>${m.career.length?`<table style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Note</th></tr></thead><tbody>${m.career.slice().reverse().slice(0,10).map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table>`:'<div class="dim" style="font-size:15px;margin-top:4px">Ta première saison s\'écrit maintenant.</div>'}</div>
  </div>
  <div>${ui.confirm==="reset"?`<span>Effacer cette carrière ? </span><button class="ghost" data-act="reset">Oui, recommencer</button> · <button class="ghost" data-act="cancel">Non</button>`:`<button class="ghost" data-act="ask-reset">Nouvelle carrière</button>`}</div>
@@ -560,6 +595,7 @@ function classementView(){
  const tb=l=>l.slice().sort((a,b)=>b.pts-a.pts);
  return`<div class="stack"><div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
  <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Équipes CDL</h2><table><thead><tr><th>#</th><th>Équipe</th><th>V-D</th><th>Pts</th></tr></thead><tbody>${tb(league("CDL")).map((t,i)=>`<tr class="${t.id===S.teamId?"mine":""} ${i===RULES.qualifiers.CDL-1?"cut":""}"><td>${i+1}</td><td>${tDot(t.id)}${t.n}</td><td>${t.w}-${t.l}</td><td>${t.pts}</td></tr>`).join("")}</tbody></table><p class="fine" style="margin-top:6px">Le trait marque la qualification pour Champs (${RULES.qualifiers.CDL} premiers).</p></section>
+ <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Classement mondial</h2>${(()=>{const all=worldRanking(),i=all.findIndex(p=>p.me),top=all.slice(0,10).map((p,x)=>[p,x+1]);if(i>=10)top.push([all[i],i+1]);return`<table><thead><tr><th>#</th><th>Joueur</th><th>Équipe</th></tr></thead><tbody>${top.map(([p,r])=>`<tr class="${p.me?"mine":""}"><td>${r}</td><td>${esc(p.n)}</td><td style="text-align:left">${tDot(p.id)}${esc(p.t)}</td></tr>`).join("")}</tbody></table>`})()}</section>
  <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Top K/D CDL</h2>${S.seasonEvents.length?`<table><thead><tr><th>#</th><th>Joueur</th><th>Équipe</th><th>K/D</th></tr></thead><tbody>${pls.slice(0,12).map((p,i)=>`<tr class="${p.me?"mine":""}"><td>${i+1}</td><td>${esc(p.n)}</td><td style="text-align:left">${esc(p.t)}</td><td>${fr(p.kd,2)}</td></tr>`).join("")}</tbody></table>`:'<p class="dim">Les K/D arrivent après le premier Major.</p>'}</section>
  </div>
  <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Challengers</h2><table style="max-width:520px"><thead><tr><th>#</th><th>Équipe</th><th>V-D</th><th>Pts</th></tr></thead><tbody>${tb(league("CH")).map((t,i)=>`<tr class="${t.id===S.teamId?"mine":""} ${i===RULES.qualifiers.CH-1?"cut":""}"><td>${i+1}</td><td>${tDot(t.id)}${t.n}</td><td>${t.w}-${t.l}</td><td>${t.pts}</td></tr>`).join("")}</tbody></table></section></div>`;
@@ -593,7 +629,7 @@ function render(){
  const app=document.getElementById("app");
  if(!S){app.innerHTML=tab==="maj"?updView():createView();return}
  if(S.ended){app.innerHTML=endView();return}
- const body=tab==="maj"?updView():tab==="equipes"?equipesView():tab==="matchs"?matchsView():tab==="classement"?classementView():carriereView();
+ const body=tab==="palmares"?palmaresView():tab==="maj"?updView():tab==="equipes"?equipesView():tab==="matchs"?matchsView():tab==="classement"?classementView():carriereView();
  app.innerHTML=hud()+body;
 }
 document.addEventListener("click",e=>{
