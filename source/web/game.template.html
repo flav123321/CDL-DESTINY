@@ -165,6 +165,16 @@ textarea{width:100%;min-height:110px;background:var(--panel);border:1px solid va
 .tagrow{display:flex;gap:8px;align-items:stretch}
 .tagrow input{min-width:0;flex:1}
 .tagrow .btn2{flex:none;white-space:nowrap}
+.notecard{background:var(--panel);padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;border-left:4px solid var(--accent)}
+.notecard.top{border-left-color:var(--win)}.notecard.low{border-left-color:var(--loss)}
+.notebig{display:flex;align-items:baseline;gap:2px}
+.notebig b{font:900 58px/1 var(--display)}
+.notecard.top .notebig b{color:var(--win)}.notecard.mid .notebig b{color:var(--accent)}.notecard.low .notebig b{color:var(--loss)}
+.notebig span{color:var(--dim);font:600 18px var(--display)}
+.notebody ul{list-style:none;margin:5px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13.5px}
+.notebody li{display:flex;justify-content:space-between;gap:10px}
+.notebody li b{font-family:var(--mono);font-weight:500;white-space:nowrap}
+@media(max-width:520px){.notecard{grid-template-columns:minmax(0,1fr)}}
 .fine{font-size:13px;color:var(--dim);max-width:75ch}
 section{min-width:0}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -301,10 +311,11 @@ function buildRows(before,keys){const now=snapMe();return[...new Set(keys)].map(
 const chance=o=>{const d=D();return clamp(d.clutchBase+(S.me.attrs[o.s]-70)/d.clutchSpread+(o.d||0),.08,d.clutchMax)};
 
 function newSeason(first){
- S.step=0;S.bonus=0;S.clutchKd=0;S.reveal=null;S.seasonEvents=[];S.flash=first?S.flash:[];
+ S.step=0;S.bonus=0;S.clutchKd=0;S.reveal=null;S.seasonEvents=[];S.clutch={att:0,ok:0};S.expRank=null;S.flash=first?S.flash:[];
  S.ovrStart=ovr();S.moneyStart=S.me.money;S.me.ks=0;S.me.kn=0;S.decisionsDone=0;
  S.teams.forEach(t=>{t.pts=0;t.w=0;t.l=0;t.p.forEach(p=>{p.ks=0;p.kn=0})});
  S.dec=pickScene(PREP,"prep");
+ const lgT=league(myTeam().lg).slice().sort((a,b)=>teamStr(b,false)-teamStr(a,false));S.expRank=lgT.indexOf(myTeam())+1;
 }
 function nextStep(){
  S.step++;
@@ -326,7 +337,7 @@ function runAllChamps(){const res={};["CDL","CH"].forEach(lg=>{res[lg]=runEvent(
 function decide(i){
  const k=STEPS[S.step][0],sc=scene(S.dec),o=sc.o[i],before=snapMe();S.flash=[];S.ev=null;S.news=null;S.decisionsDone++;
  if(k[0]==="m"&&k!=="merc"||k==="champs"){
-  const pc=chance(o),ok=Math.random()<pc,d=D(),info=`${Math.round(pc*100)} % de réussite (${STAT[o.s]} ${Math.round(S.me.attrs[o.s])}), ${o.b>=3?"gros":o.b>=2?"moyen":"petit"} impact`;
+  const pc=chance(o),ok=Math.random()<pc,d=D();S.clutch=S.clutch||{att:0,ok:0};S.clutch.att++;if(ok)S.clutch.ok++;const info=`${Math.round(pc*100)} % de réussite (${STAT[o.s]} ${Math.round(S.me.attrs[o.s])}), ${o.b>=3?"gros":o.b>=2?"moyen":"petit"} impact`;
   if(ok){S.bonus=o.b*d.winBonus;S.clutchKd=o.b*.015;const fx=applyE({morale:4,fame:Math.round(o.b)}).concat(applyE({[o.s]:.6}));S.reveal={ok:true,label:o.t,text:o.w,info,rows:buildRows(before,fx.map(x=>x[0]))};addLog("Grand moment : "+sc.t.toLowerCase()+".")}
   else{S.bonus=-o.b*d.failPenalty;S.clutchKd=-o.b*.008;const fx=applyE({morale:-4});S.reveal={ok:false,label:o.t,text:o.l,info,rows:buildRows(before,fx.map(x=>x[0]))}}
   let res;
@@ -338,6 +349,22 @@ function decide(i){
   const fx=applyE(o.e);S.reveal={label:o.t,title:sc.t,rows:buildRows(before,fx.map(x=>x[0]))};
  }
  nextStep();save();render();window.scrollTo&&window.scrollTo({top:0,behavior:"auto"});
+}
+/* Note de saison sur 10 : compare ce que tu fais à ce qu'on attendait de toi, sans punir une petite équipe. */
+function seasonNote(){
+ const t=myTeam(),ts=league(t.lg),evs=(S.seasonEvents||[]).filter(e=>e.run&&e.lg===t.lg),maj=evs.filter(e=>!e.champs);
+ if(!evs.length&&!(S.clutch&&S.clutch.att))return null;
+ const avg=ts.reduce((a,x)=>a+teamStr(x,false),0)/ts.length,exp=1+(ovr()-avg)*.013,k=S.me.kn?kd(S.me):exp;
+ const expR=S.expRank||(ts.slice().sort((a,b)=>teamStr(b,false)-teamStr(a,false)).indexOf(t)+1);
+ const avgR=maj.length?maj.reduce((a,e)=>a+e.run.rank,0)/maj.length:expR,c=S.clutch||{att:0,ok:0};
+ const parts=[
+  {l:`K/D par rapport à ton niveau (${fr(k,2)}, attendu ${fr(exp,2)})`,v:clamp((k-exp)*20,-2.2,2.2)},
+  {l:`Moments décisifs réussis (${c.ok} sur ${c.att})`,v:c.att?clamp((c.ok/c.att-.35)*3.5,-1.2,2.2):0},
+  {l:`Résultats par rapport à ton équipe (moyenne ${ord(Math.round(avgR))}, attendu ${ord(expR)})`,v:clamp((expR-avgR)*.3,-1.5,1.5)},
+  {l:"Entente avec tes coéquipiers",v:clamp((S.me.chem-50)*.02,-.8,.8)},
+ ];
+ const titles=evs.filter(e=>e.run.rank===1).length;if(titles)parts.push({l:`Titre${titles>1?"s":""} remporté${titles>1?"s":""} (${titles})`,v:Math.min(1.2,titles*.3)});
+ return{note:clamp(5+parts.reduce((a,x)=>a+x.v,0),1,10),parts};
 }
 function value(){
  const m=S.me,t=myTeam(),k=kd(m)||1,mult=t.lg==="CDL"?25:12;
@@ -361,10 +388,11 @@ function endSeason(){
  const champs=S.seasonEvents.filter(e=>e.champs&&e.lg==="CDL")[0];
  if(champs)S.champsHist.unshift({y:S.year,t:team(champs.win).n});
  const v=value();
- S.review={place,of:table.length,lg,kd:k,v,ovr0:S.ovrStart,ovr1:ovr(),earn:m.money-S.moneyStart,awards,teamN:t.n,pts:t.pts};
+ const sn=seasonNote()||{note:5,parts:[]};
+ S.review={place,of:table.length,lg,kd:k,v,ovr0:S.ovrStart,ovr1:ovr(),earn:m.money-S.moneyStart,awards,teamN:t.n,pts:t.pts,note:sn.note,parts:sn.parts};
  m.best=Math.max(m.best||0,ovr());
  const rec=seasonRecord(S.seasonEvents),rnk=myRank();m.bestRank=Math.min(m.bestRank||rnk,rnk);
- m.career.push({y:S.year,t:t.n,lg,place,kd:k,ovr:ovr(),rank:rnk,...rec});
+ m.career.push({y:S.year,t:t.n,lg,place,kd:k,ovr:ovr(),rank:rnk,note:sn.note,...rec});
  S.offers=buildOffers(v);
  addLog(`Fin de saison : ${ord(place)} sur ${table.length} en ${lgName(lg)}, K/D ${fr(k,2)}.`);
 }
@@ -378,11 +406,8 @@ function buildOffers(v){
   return{id:t.id,str:teamStr(t,false),score:Math.random()+clamp((ovr()-weakest)*.03,-.3,.3)};
  }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,4).sort((a,b)=>b.str-a.str).map(x=>x.id);
  const ct=myTeam();
- const isCDL=ct.lg==="CDL",k0=kd(S.me)||1,evs=S.seasonEvents.filter(e=>e.run&&!e.champs),mid=isCDL?6.5:4.5;
- const avgR=evs.length?evs.reduce((a,e)=>a+e.run.rank,0)/evs.length:mid;
- const won=S.seasonEvents.some(e=>e.champs&&e.run&&e.run.rank===1);
- const margin=(k0-1)*(isCDL?30:20)+(mid-avgR)*.8+(ovr()-teamStr(ct,false))*.4+(S.me.chem-50)*.04+(won?4:0);
- const lvl=margin>=RULES.retention.strongAt?"fort":margin>=RULES.retention.keepAt?"oui":"non";
+ const n=(S.review&&S.review.note)||5,ret=RULES.retention;
+ const lvl=n>=(ret.strongNote??7.5)?"fort":n>=(ret.keepNote??5.5)?"oui":"non";
  S.review.keep=lvl;
  const others=res.filter(id=>id!==cur);res.length=0;res.push(...others.slice(0,4));
  if(lvl!=="non")res.unshift(cur);
@@ -457,7 +482,7 @@ function sign(id){
 }
 function retire(){
  const m=S.me;
- if(!S.review&&S.seasonEvents&&S.seasonEvents.some(e=>e.run)){const t=myTeam(),table=league(t.lg).slice().sort((a,b)=>b.pts-a.pts),rnk=myRank();m.career.push({y:S.year,t:t.n,lg:t.lg,place:table.indexOf(t)+1,kd:kd(m)||1,ovr:ovr(),rank:rnk,partial:true,...seasonRecord(S.seasonEvents)});m.bestRank=Math.min(m.bestRank||rnk,rnk)}
+ if(!S.review&&S.seasonEvents&&S.seasonEvents.some(e=>e.run)){const t=myTeam(),table=league(t.lg).slice().sort((a,b)=>b.pts-a.pts),rnk=myRank();m.career.push({y:S.year,t:t.n,lg:t.lg,place:table.indexOf(t)+1,kd:kd(m)||1,ovr:ovr(),rank:rnk,partial:true,note:(seasonNote()||{}).note,...seasonRecord(S.seasonEvents)});m.bestRank=Math.min(m.bestRank||rnk,rnk)}
  m.best=Math.max(m.best||0,ovr());S.reveal=null;S.ended=true;S.endedYear=S.year;addLog("Tu annonces la fin de ta carrière.");save();window.scrollTo&&window.scrollTo({top:0});render();
 }
 function startCareer(f){
@@ -488,6 +513,7 @@ function hud(){
   <div class="nums">
    <div><b>${S.year}</b><span class="lab">Saison</span></div>
    <div><b>${m.kn?fr(kd(m),2):"–"}</b><span class="lab">K/D</span></div>
+   <div><b>${(()=>{const n=S.review?{note:S.review.note}:seasonNote();return n?fr(n.note,1):"–"})()}</b><span class="lab">Note saison</span></div>
    <div><b>${usd(m.money)}</b><span class="lab">Fictif</span></div>
   </div>
  </header>
@@ -517,6 +543,7 @@ function decisionView(){
   <div class="opts">${sc.o.map((o,i)=>`<button class="opt" id="opt-${i}" data-opt="${i}"><strong>${o.t}</strong></button>`).join("")}</div>
  </section>`;
 }
+const noteCls=n=>n>=(RULES.retention.strongNote??7.5)?"top":n>=(RULES.retention.keepNote??5.5)?"mid":"low";
 function reviewView(){
  const r=S.review,d=r.ovr1-r.ovr0;
  const stay=S.offers.find(o=>o.id===S.teamId),others=S.offers.filter(o=>o.id!==S.teamId);
@@ -528,11 +555,11 @@ function reviewView(){
   <div class="kv"><span class="dim">Coéquipiers</span><span>Repart à ${RULES.retention.newTeamChem}</span></div>
  </button>`};
  const keepBlock=r=>{const n=esc(r.teamN);
-  if(!stay)return`<div class="flash bad">${n} ne te garde pas : K/D ${fr(r.kd,2)} et ${ord(r.place)} place, ça n'a pas suffi. Il faut trouver un autre club.</div>`;
+  if(!stay)return`<div class="flash bad">${n} ne te garde pas : ta note de saison de ${fr(r.note,1)}/10 est trop basse. Il faut trouver un autre club.</div>`;
   const raise=stay.sal>S.salary?Math.round((stay.sal/S.salary-1)*100):0;
   return`<button class="card offer keep" data-sign="${stay.id}" id="sign-${stay.id}">
    ${tBand(stay.id,"Rester chez "+n,Math.round(stay.str))}
-   <p>${r.keep==="fort"?"Le club veut absolument te garder et augmente ton salaire.":"Le club est satisfait de ta saison et te propose de prolonger."}</p>
+   <p>${r.keep==="fort"?`Avec ${fr(r.note,1)}/10, le club veut absolument te garder et augmente ton salaire.`:`Avec ${fr(r.note,1)}/10, le club est satisfait et te propose de prolonger.`}</p>
    <div class="kv"><span class="dim">Salaire</span><span>${usd(stay.sal)}${raise?" (+"+raise+" %)":""}</span></div>
    <div class="kv"><span class="dim">Coéquipiers</span><span class="up">+${RULES.retention.stayChem}</span></div>
    <div class="kv"><span class="dim">Moral</span><span class="up">+${RULES.retention.stayMorale}</span></div>
@@ -545,10 +572,11 @@ function reviewView(){
   <h2>${esc(r.teamN)} finit ${ord(r.place)}</h2>
   <p>${judge}${r.awards.length?` <strong style="color:var(--accent)">${r.awards.join(", ")} !</strong>`:""}</p>
  </section>
+ <section class="notecard ${noteCls(r.note)}"><div class="notebig"><b>${fr(r.note,1)}</b><span>/10</span></div><div class="notebody"><div class="lab">Note de saison</div><ul>${(r.parts||[]).map(x=>{const v=Math.round(x.v*10)/10;return`<li><span>${esc(x.l)}</span><b class="${v>=0?"up":"down"}">${v>=0?"+":"−"}${fr(Math.abs(v),1)}</b></li>`}).join("")}</ul></div></section>
  <div class="tiles">
   <div><b>${fr(r.kd,2)}</b><span class="lab">K/D</span></div>
   <div><b>${r.pts}</b><span class="lab">Points équipe</span></div>
-  <div><b>${d>=0?"+":"−"}${fr(Math.abs(d),1)}</b><span class="lab">Note</span></div>
+  <div><b>${d>=0?"+":"−"}${fr(Math.abs(d),1)}</b><span class="lab">Progression</span></div>
   <div><b>${Math.round(r.v)}</b><span class="lab">Cote marché</span></div>
   <div><b>${usd(r.earn)}</b><span class="lab">Gains saison</span></div>
  </div>
@@ -621,13 +649,13 @@ function seasonRecord(evs){
 function palmaresView(){
  const m=S.me,rows=m.career.map(c=>{
   const y=String(c.y),tr=m.trophies.filter(t=>t.t.endsWith(" "+y));
-  return{y:c.y,t:c.t,w:c.w,l:c.l,ch:c.ch!==undefined?c.ch:tr.filter(t=>/^Champion Champs /.test(t.t)).length,maj:c.maj!==undefined?c.maj:tr.filter(t=>/^Vainqueur Major /.test(t.t)).length,rank:c.rank}});
- if(!S.review&&S.seasonEvents.some(e=>e.run)){const r=seasonRecord(S.seasonEvents);rows.push({y:S.year,t:myTeam().n,now:true,rank:myRank(),...r})}
+  return{y:c.y,t:c.t,w:c.w,l:c.l,ch:c.ch!==undefined?c.ch:tr.filter(t=>/^Champion Champs /.test(t.t)).length,maj:c.maj!==undefined?c.maj:tr.filter(t=>/^Vainqueur Major /.test(t.t)).length,rank:c.rank,note:c.note}});
+ if(!S.review&&S.seasonEvents.some(e=>e.run)){const r=seasonRecord(S.seasonEvents);rows.push({y:S.year,t:myTeam().n,now:true,rank:myRank(),note:(seasonNote()||{}).note,...r})}
  const sum=k=>rows.reduce((a,c)=>a+(c[k]||0),0),old=rows.some(c=>c.w===undefined);
  const ranks=rows.map(c=>c.rank).filter(Boolean).concat(m.bestRank||[]),best=ranks.length?Math.min(...ranks):myRank();
  return`<div class="stack"><h2 style="font-size:38px">Palmarès</h2>
  <div class="tiles"><div><b>${sum("w")}</b><span class="lab">Victoires</span></div><div><b>${sum("l")}</b><span class="lab">Défaites</span></div><div><b>${sum("ch")}</b><span class="lab">Titres Champs</span></div><div><b>${sum("maj")}</b><span class="lab">Majors gagnés</span></div><div><b>#${myRank()}</b><span class="lab">Rang mondial</span></div><div><b>#${best}</b><span class="lab">Meilleur rang</span></div></div>
- <section class="scroll"><div class="lab">Saison par saison</div>${rows.length?`<table class="palm" style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>V</th><th>D</th><th>Champs</th><th>Majors</th><th>Rang</th></tr></thead><tbody>${rows.slice().reverse().map(c=>`<tr class="${c.now?"mine":""}"><td>${c.y}</td><td>${esc(c.t)}${c.now?' <span class="fic">en cours</span>':""}</td><td>${c.w===undefined?"–":c.w}</td><td>${c.l===undefined?"–":c.l}</td><td>${c.ch}</td><td>${c.maj}</td><td>${c.rank?"#"+c.rank:"–"}</td></tr>`).join("")}</tbody><tfoot><tr><td></td><td>Total</td><td>${sum("w")}</td><td>${sum("l")}</td><td>${sum("ch")}</td><td>${sum("maj")}</td><td></td></tr></tfoot></table>`:'<p class="dim" style="margin-top:4px">Ta première ligne arrive après ton premier tournoi.</p>'}
+ <section class="scroll"><div class="lab">Saison par saison</div>${rows.length?`<table class="palm" style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>V</th><th>D</th><th>Champs</th><th>Majors</th><th>Note</th><th>Rang</th></tr></thead><tbody>${rows.slice().reverse().map(c=>`<tr class="${c.now?"mine":""}"><td>${c.y}</td><td>${esc(c.t)}${c.now?' <span class="fic">en cours</span>':""}</td><td>${c.w===undefined?"–":c.w}</td><td>${c.l===undefined?"–":c.l}</td><td>${c.ch}</td><td>${c.maj}</td><td>${c.note!==undefined?fr(c.note,1):"–"}</td><td>${c.rank?"#"+c.rank:"–"}</td></tr>`).join("")}</tbody><tfoot><tr><td></td><td>Total</td><td>${sum("w")}</td><td>${sum("l")}</td><td>${sum("ch")}</td><td>${sum("maj")}</td><td></td><td></td></tr></tfoot></table>`:'<p class="dim" style="margin-top:4px">Ta première ligne arrive après ton premier tournoi.</p>'}
  <p class="fine" style="margin-top:6px">V et D comptent les séries jouées avec ton équipe, qualifications comprises. Majors et Champs comptent les titres en CDL.${old?" Les saisons jouées avant cette mise à jour n'ont pas de V et D.":""}</p></section>
  <section><div class="lab">Trophées</div><div style="margin-top:4px;font-size:15px">${m.trophies.length?m.trophies.slice().reverse().map(x=>`<div>${x.big?"<strong>":""}${esc(x.t)}${x.big?"</strong>":""}</div>`).join(""):'<span class="dim">Rien encore. Le premier trophée changera tout.</span>'}</div></section>
  </div>`;
@@ -636,7 +664,7 @@ function footerCareer(){
  const m=S.me;
  return`<section class="stack" style="border-top:1px solid var(--line);padding-top:14px">
  <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
- <div class="scroll"><div class="lab">Parcours</div>${m.career.length?`<table style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Note</th></tr></thead><tbody>${m.career.slice().reverse().slice(0,10).map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table>`:'<div class="dim" style="font-size:15px;margin-top:4px">Ta première saison s\'écrit maintenant.</div>'}</div>
+ <div class="scroll"><div class="lab">Parcours</div>${m.career.length?`<table style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Niveau</th></tr></thead><tbody>${m.career.slice().reverse().slice(0,10).map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table>`:'<div class="dim" style="font-size:15px;margin-top:4px">Ta première saison s\'écrit maintenant.</div>'}</div>
  </div>
  ${S.step<9?`<div>${retireControl("Prendre ma retraite")}</div>`:""}
  </section>`;
@@ -678,7 +706,7 @@ function endView(){
  const lab=score>=120?"Légende de la CDL":score>=70?"Grand nom de la ligue":score>=35?"Pro respecté":"Carrière honnête";
  return`<div class="stack"><div class="hero"><div class="lab">Fin de carrière · ${m.age} ans</div><h1 style="font-size:clamp(46px,10vw,96px)">${esc(m.name)}</h1><p><strong style="color:var(--accent)">${lab}</strong>. ${m.career.length} saison${m.career.length>1?"s":""}, ${usd(m.money)} gagnés (fictifs).</p></div>
  <div class="tiles"><div><b>${wins}</b><span class="lab">Titres Champs</span></div><div><b>${maj}</b><span class="lab">Majors</span></div><div><b>${mvp}</b><span class="lab">MVP</span></div><div><b>${Math.round(m.best)}</b><span class="lab">Meilleure note</span></div></div>
- <div class="scroll"><table><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Note</th></tr></thead><tbody>${m.career.map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)} ${lgName(c.lg)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table></div>
+ <div class="scroll"><table><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Niveau</th></tr></thead><tbody>${m.career.map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)} ${lgName(c.lg)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table></div>
  <div class="row"><button class="btn" data-act="new" id="restart">Nouvelle carrière</button><button class="btn2" data-act="home" id="end-home">Retour à l'accueil</button></div></div>`;
 }
 function careerInfo(c){

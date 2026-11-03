@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 7,
+ "revision": 8,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "Un pseudo aléatoire est proposé à chaque nouvelle carrière.",
+ "notes": "Une note de saison décide maintenant si ton club te garde.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -70,12 +70,12 @@
    "challengersScale": 0.08
   },
   "retention": {
-   "strongAt": 5,
-   "keepAt": 0,
    "strongRaise": 1.15,
    "stayChem": 10,
    "stayMorale": 5,
-   "newTeamChem": 52
+   "newTeamChem": 52,
+   "strongNote": 7.5,
+   "keepNote": 5.5
   },
   "simulation": {
    "mapSpread": 9,
