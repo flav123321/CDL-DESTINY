@@ -81,7 +81,7 @@ function updView(){
  const a=CS.active,when=CS.lastCheck?new Date(CS.lastCheck).toLocaleString("fr-FR"):"jamais";
  return`<div class="stack" style="max-width:720px">
  <div><h2 style="font-size:38px">Mises à jour du jeu</h2><p class="dim">Version installée : révision ${a.revision}, du ${esc(a.updatedAt||"")}. ${a.notes?esc(a.notes):""}</p>
- <p class="dim" style="font-size:14px">Dernière vérification : ${when}</p></div>
+ <p class="dim" style="font-size:14px">Dernière vérification : ${when}. Version de l'application : __BUILD_ID__.</p></div>
  ${updMsg?`<div class="flash note" id="upd-msg">${esc(updMsg)}</div>`:""}
  ${CS.pending?`<div class="flash ok">Révision ${CS.pending.remote.revision} prête. ${S&&!atSeasonStart()?"Elle s'appliquera au début de ta prochaine saison.":""}</div>`:""}
  ${(CS.conflicts||[]).length?`<section class="stack" style="gap:8px"><div class="lab">À trancher : modifié des deux côtés</div>${CS.conflicts.map((c,i)=>`<div class="conf"><span class="mono">${esc(pathLabel(c.path))}</span><div><span class="dim">Ta version :</span> ${esc(shortJ(c.ours))}</div><div><span class="dim">En ligne :</span> ${esc(shortJ(c.theirs))}</div><div class="row"><button class="btn2" data-conf="${i}" data-keep="mine" id="conf-mine-${i}">Garder la mienne</button><button class="btn2" data-conf="${i}" data-keep="online" id="conf-on-${i}">Garder celle en ligne</button></div></div>`).join("")}</section>`:""}
