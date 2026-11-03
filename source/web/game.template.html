@@ -138,9 +138,24 @@ textarea{width:100%;min-height:110px;background:var(--panel);border:1px solid va
 .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
 .btn2{background:var(--panel2);padding:9px 13px;font-weight:600;font-size:15px}
 .btn2:hover{background:var(--line)}
+.reveal{background:var(--panel);padding:16px 18px;border-top:4px solid var(--accent);display:flex;flex-direction:column;gap:6px}
+.reveal.good{border-top-color:var(--win)}.reveal.bad{border-top-color:var(--loss)}
+.reveal h2{font-size:clamp(38px,9vw,56px);font-weight:900}
+.reveal.good h2{color:var(--win)}.reveal.bad h2{color:var(--loss)}
+.fxlist{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.fxrow{animation:fxin .35s ease-out both}
+.fxtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600;font-size:17px}
+.fxtop b{font:900 34px/1 var(--display)}
+.fxrow.major .fxtop b{font-size:42px}
+.fxbar{display:block;height:9px;background:var(--panel2);margin-top:4px}
+.fxbar span{display:block;height:100%;background:var(--win);width:var(--to);animation:fxgrow .7s ease-out both}
+.fxbar span.neg{background:var(--loss)}
+.fxval{font-size:12px;color:var(--dim);margin-top:3px}
+@keyframes fxin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fxgrow{from{width:var(--from)}to{width:var(--to)}}
 .fine{font-size:13px;color:var(--dim);max-width:75ch}
 section{min-width:0}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 <div id="app"></div>
 <script>
@@ -269,10 +284,12 @@ function applyE(e){const m=S.me,out=[];for(const k in e){const v=shown(k,e[k]);o
 }
 const fxHTML=fx=>'<div class="chips">'+fx.map(([k,v])=>{const txt=k==="money"?(v>0?"+":"")+usd(v):(v>0?"+":"−")+fr(Math.abs(v),Number.isInteger(v)?0:1);return`<span class="${v>0?"up":"down"}">${txt}${k==="money"?"":" "+STAT[k]}</span>`}).join("")+"</div>";
 function chipHTML(e){return'<div class="chips">'+Object.keys(e).map(k=>{const v=shown(k,e[k]);const txt=k==="money"?(v>0?"+":"")+usd(v):(v>0?"+":"−")+fr(Math.abs(v),Number.isInteger(v)?0:1);return`<span class="${v>0?"up":"down"}">${txt}${k==="money"?"":" "+STAT[k]}</span>`}).join("")+"</div>"}
+const snapMe=()=>{const m=S.me;return{...m.attrs,morale:m.morale,fame:m.fame,money:m.money,form:m.form,chem:m.chem,ovr:ovr()}};
+function buildRows(before,keys){const now=snapMe();return[...new Set(keys)].map(k=>({k,from:before[k],to:now[k]})).concat(Math.round(before.ovr)!==Math.round(now.ovr)?[{k:"ovr",from:before.ovr,to:now.ovr}]:[])}
 const chance=o=>{const d=D();return clamp(d.clutchBase+(S.me.attrs[o.s]-70)/d.clutchSpread+(o.d||0),.08,d.clutchMax)};
 
 function newSeason(first){
- S.step=0;S.bonus=0;S.clutchKd=0;S.seasonEvents=[];S.flash=first?S.flash:[];
+ S.step=0;S.bonus=0;S.clutchKd=0;S.reveal=null;S.seasonEvents=[];S.flash=first?S.flash:[];
  S.ovrStart=ovr();S.moneyStart=S.me.money;S.me.ks=0;S.me.kn=0;S.decisionsDone=0;
  S.teams.forEach(t=>{t.pts=0;t.w=0;t.l=0;t.p.forEach(p=>{p.ks=0;p.kn=0})});
  S.dec=pickScene(PREP,"prep");
@@ -295,18 +312,18 @@ const champsName=lg=>lg==="CDL"?"Champs":"la finale Challengers";
 const majorName=(lg,i)=>(lg==="CDL"?"Major ":"Open ")+["I","II","III","IV"][i];
 function runAllChamps(){const res={};["CDL","CH"].forEach(lg=>{res[lg]=runEvent(lg,lg==="CDL"?"Champs":"Finale Challengers",true)});return res}
 function decide(i){
- const k=STEPS[S.step][0],sc=scene(S.dec),o=sc.o[i];S.flash=[];S.ev=null;S.news=null;S.decisionsDone++;
+ const k=STEPS[S.step][0],sc=scene(S.dec),o=sc.o[i],before=snapMe();S.flash=[];S.ev=null;S.news=null;S.decisionsDone++;
  if(k[0]==="m"&&k!=="merc"||k==="champs"){
   const pc=chance(o),ok=Math.random()<pc,d=D(),info=`${Math.round(pc*100)} % de réussite (${STAT[o.s]} ${Math.round(S.me.attrs[o.s])}), ${o.b>=3?"gros":o.b>=2?"moyen":"petit"} impact`;
-  if(ok){S.bonus=o.b*d.winBonus;S.clutchKd=o.b*.015;const fx=applyE({morale:4,fame:Math.round(o.b)}).concat(applyE({[o.s]:.6}));S.flash.push({k:"ok",s:o.w,info,fx});addLog("Grand moment : "+sc.t.toLowerCase()+".")}
-  else{S.bonus=-o.b*d.failPenalty;S.clutchKd=-o.b*.008;const fx=applyE({morale:-4});S.flash.push({k:"bad",s:o.l,info,fx})}
+  if(ok){S.bonus=o.b*d.winBonus;S.clutchKd=o.b*.015;const fx=applyE({morale:4,fame:Math.round(o.b)}).concat(applyE({[o.s]:.6}));S.reveal={ok:true,label:o.t,text:o.w,info,rows:buildRows(before,fx.map(x=>x[0]))};addLog("Grand moment : "+sc.t.toLowerCase()+".")}
+  else{S.bonus=-o.b*d.failPenalty;S.clutchKd=-o.b*.008;const fx=applyE({morale:-4});S.reveal={ok:false,label:o.t,text:o.l,info,rows:buildRows(before,fx.map(x=>x[0]))}}
   let res;
   if(k==="champs"){const r=runAllChamps();res=r[myTeam().lg]}
   else{const idx=+k[1],lg=myTeam().lg;["CDL","CH"].forEach(g=>{const rr=runEvent(g,majorName(g,idx),false);if(g===lg)res=rr})}
   S.ev=res;S.bonus=0;S.clutchKd=0;S.me.form*=.6;
   if(res.run)addLog(`${res.label} : ${ord(res.run.rank)} avec ${myTeam().n}.`);
  }else{
-  const fx=applyE(o.e);S.flash.push({k:"note",s:"Choix fait : "+o.t+".",fx});
+  const fx=applyE(o.e);S.reveal={label:o.t,title:sc.t,rows:buildRows(before,fx.map(x=>x[0]))};
  }
  nextStep();save();render();window.scrollTo&&window.scrollTo({top:0,behavior:"auto"});
 }
@@ -538,8 +555,29 @@ function sidePanel(){
  <section><div class="lab">Journal</div><ul class="feed">${S.log.slice(0,6).map(l=>`<li><time>${l.y}</time>${esc(l.s)}</li>`).join("")}</ul></section>
  </aside>`;
 }
+function fxRow(r,i){
+ const lab=r.k==="ovr"?"Note générale":STAT[r.k],d=r.to-r.from,isAttr=r.k in S.me.attrs,dec=isAttr?1:0;
+ const delta=r.k==="money"?(d>0?"+":d<0?"−":"")+usd(Math.abs(d)):(d>0?"+":d<0?"−":"=")+(d?fr(Math.abs(d),isAttr&&!Number.isInteger(+d.toFixed(1))?1:0):"");
+ const val=x=>r.k==="money"?usd(x):fr(x,r.k==="ovr"?0:dec);
+ const pct=x=>r.k==="form"?clamp((x+6)/12*100,0,100):r.k==="money"?null:(isAttr||r.k==="ovr")?clamp((x-40)/59*100,2,100):clamp(x,0,100);
+ const bar=r.k==="money"?"":`<i class="fxbar"><span class="${d<0?"neg":""}" style="--from:${pct(r.from)}%;--to:${pct(r.to)}%;animation-delay:${.15+i*.12}s"></span></i>`;
+ return`<div class="fxrow ${r.k==="ovr"?"major":""}" style="animation-delay:${i*.12}s"><div class="fxtop"><span>${lab}</span><b class="${d>0?"up":d<0?"down":"neutral"}">${delta}</b></div>${bar}<div class="fxval mono">${val(r.from)} → ${val(r.to)}</div></div>`;
+}
+function revealCard(){
+ const r=S.reveal,stamp=r.ok===true?"Réussi !":r.ok===false?"Raté":esc(r.title||"Ton choix");
+ return`<section class="reveal ${r.ok===true?"good":r.ok===false?"bad":""}">
+  <div class="lab">Tu as choisi : ${esc(r.label)}</div>
+  <h2>${stamp}</h2>
+  ${r.text?`<p>${esc(r.text)}</p>`:""}
+  ${r.info?`<div class="dim mono" style="font-size:13px">${esc(r.info)}</div>`:""}
+  <div class="fxlist">${r.rows.map(fxRow).join("")}</div>
+ </section>
+ ${S.ev&&S.ev.run?evCard(S.ev):""}
+ <div><button class="btn" id="reveal-ok" data-act="reveal-ok">Continuer</button></div>`;
+}
 function carriereView(){
- return`<div class="cols"><div class="stack">${track()}${evCard(S.ev)}${flashes()}${newsBox()}${S.step>=9?reviewView():decisionView()}</div>${sidePanel()}</div>${footerCareer()}`;
+ if(S.reveal)return`<div class="cols"><div class="stack">${track()}${revealCard()}</div>${sidePanel()}</div>`;
+ return`<div class="cols"><div class="stack">${track()}${flashes()}${newsBox()}${S.step>=9?reviewView():decisionView()}</div>${sidePanel()}</div>${footerCareer()}`;
 }
 /* Classement mondial : note du joueur, ajustée par ses performances de la saison. */
 function worldRanking(){
@@ -653,6 +691,7 @@ document.addEventListener("click",e=>{
  if(d.sign){sign(d.sign);return}
  if(d.role||d.orig||d.team){form.name=document.getElementById("f-name").value;form.nat=document.getElementById("f-nat").value;if(d.role)form.role=d.role;if(d.orig)form.orig=d.orig;if(d.team)form.team=d.team;render();return}
  if(handleUpd(d,b))return;
+ if(d.act==="reveal-ok"){S.reveal=null;S.ev=null;save();render();window.scrollTo&&window.scrollTo({top:0});return}
  if(d.act==="ask-retire"){ui.confirm="retire";render()}
  if(d.act==="ask-reset"){ui.confirm="reset";render()}
  if(d.act==="cancel"){ui.confirm=null;render()}
