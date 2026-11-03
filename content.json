@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 2,
+ "revision": 3,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "38 nouvelles décisions et 3 nouveaux parcours.",
+ "notes": "Drapeaux des joueurs et correction de l'effectif de Cloud9.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -270,19 +270,23 @@
     "players": [
      {
       "name": "Shotzzy",
-      "rating": 92
+      "rating": 92,
+      "nat": "US"
      },
      {
       "name": "Dashy",
-      "rating": 91
+      "rating": 91,
+      "nat": "CA"
      },
      {
       "name": "Mercules",
-      "rating": 89
+      "rating": 89,
+      "nat": "US"
      },
      {
       "name": "Huke",
-      "rating": 88
+      "rating": 88,
+      "nat": "US"
      }
     ],
     "color": "#93C83E"
@@ -294,15 +298,18 @@
     "players": [
      {
       "name": "Simp",
-      "rating": 90
+      "rating": 90,
+      "nat": "US"
      },
      {
       "name": "04",
-      "rating": 86
+      "rating": 86,
+      "nat": "US"
      },
      {
       "name": "Drazah",
-      "rating": 86
+      "rating": 86,
+      "nat": "US"
      },
      {
       "name": "Abuzah",
@@ -318,19 +325,23 @@
     "players": [
      {
       "name": "Scrap",
-      "rating": 91
+      "rating": 91,
+      "nat": "US"
      },
      {
       "name": "HyDra",
-      "rating": 90
+      "rating": 90,
+      "nat": "FR"
      },
      {
       "name": "aBeZy",
-      "rating": 89
+      "rating": 89,
+      "nat": "US"
      },
      {
       "name": "Nium",
-      "rating": 84
+      "rating": 84,
+      "nat": "US"
      }
     ],
     "color": "#E8112D"
@@ -342,19 +353,23 @@
     "players": [
      {
       "name": "Cellium",
-      "rating": 90
+      "rating": 90,
+      "nat": "US"
      },
      {
       "name": "Pred",
-      "rating": 89
+      "rating": 89,
+      "nat": "AU"
      },
      {
       "name": "KiSMET",
-      "rating": 84
+      "rating": 84,
+      "nat": "GB"
      },
      {
       "name": "Exnid",
-      "rating": 80
+      "rating": 80,
+      "nat": "SA"
      }
     ],
     "color": "#00A651"
@@ -366,19 +381,23 @@
     "players": [
      {
       "name": "Neptune",
-      "rating": 84
+      "rating": 84,
+      "nat": "US"
      },
      {
       "name": "Ghosty",
-      "rating": 82
+      "rating": 82,
+      "nat": "US"
      },
      {
       "name": "Estreal",
-      "rating": 82
+      "rating": 82,
+      "nat": "US"
      },
      {
       "name": "JoeDeceives",
-      "rating": 80
+      "rating": 80,
+      "nat": "US"
      }
     ],
     "color": "#E9E6E0"
@@ -390,7 +409,8 @@
     "players": [
      {
       "name": "CleanX",
-      "rating": 85
+      "rating": 85,
+      "nat": "DK"
      },
      {
       "name": "Kips",
@@ -398,11 +418,13 @@
      },
      {
       "name": "RenKoR",
-      "rating": 81
+      "rating": 81,
+      "nat": "ES"
      },
      {
       "name": "Ethan",
-      "rating": 76
+      "rating": 76,
+      "nat": "GB"
      }
     ],
     "color": "#3F63E0"
@@ -414,19 +436,23 @@
     "players": [
      {
       "name": "Envoy",
-      "rating": 84
+      "rating": 84,
+      "nat": "US"
      },
      {
       "name": "Skyz",
-      "rating": 84
+      "rating": 84,
+      "nat": "ES"
      },
      {
       "name": "Nastie",
-      "rating": 79
+      "rating": 79,
+      "nat": "GB"
      },
      {
       "name": "Kremp",
-      "rating": 78
+      "rating": 78,
+      "nat": "US"
      }
     ],
     "color": "#D71920"
@@ -438,15 +464,18 @@
     "players": [
      {
       "name": "SupeR",
-      "rating": 83
+      "rating": 83,
+      "nat": "ES"
      },
      {
       "name": "Mettalz",
-      "rating": 80
+      "rating": 80,
+      "nat": "GB"
      },
      {
       "name": "ReeaL",
-      "rating": 80
+      "rating": 80,
+      "nat": "ES"
      }
     ],
     "color": "#FFC400"
@@ -458,19 +487,23 @@
     "players": [
      {
       "name": "Purj",
-      "rating": 81
+      "rating": 81,
+      "nat": "US"
      },
      {
       "name": "Afro",
-      "rating": 80
+      "rating": 80,
+      "nat": "GB"
      },
      {
       "name": "TJHaLy",
-      "rating": 79
+      "rating": 79,
+      "nat": "US"
      },
      {
       "name": "Spart",
-      "rating": 78
+      "rating": 78,
+      "nat": "US"
      }
     ],
     "color": "#F26A21"
@@ -481,16 +514,19 @@
     "prestige": 72,
     "players": [
      {
-      "name": "Arian",
-      "rating": 77
+      "name": "Encourage",
+      "rating": 76,
+      "nat": "US"
      },
      {
       "name": "Hide",
-      "rating": 76
+      "rating": 76,
+      "nat": "US"
      },
      {
       "name": "Nejra",
-      "rating": 76
+      "rating": 76,
+      "nat": "PR"
      },
      {
       "name": "Noysii",
@@ -506,7 +542,8 @@
     "players": [
      {
       "name": "Nero",
-      "rating": 80
+      "rating": 80,
+      "nat": "US"
      },
      {
       "name": "Craze",
@@ -518,7 +555,8 @@
      },
      {
       "name": "Lunarz",
-      "rating": 76
+      "rating": 76,
+      "nat": "US"
      }
     ],
     "color": "#00B2A9"
@@ -530,7 +568,8 @@
     "players": [
      {
       "name": "Standy",
-      "rating": 78
+      "rating": 78,
+      "nat": "US"
      },
      {
       "name": "Exceed",
@@ -597,7 +636,8 @@
   "freeAgents": [
    {
     "name": "Insight",
-    "rating": 82
+    "rating": 82,
+    "nat": "GB"
    },
    {
     "name": "Sib",

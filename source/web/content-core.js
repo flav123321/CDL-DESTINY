@@ -64,6 +64,7 @@
         if (!isObj(x) || !Array.isArray(x.players)) return;
         x.players.forEach((p) => {
           if (!isStr(p.name) || !isNum(p.rating)) e.push(`${x.id} : joueur invalide.`);
+          if (p.nat !== undefined && !/^[A-Z]{2}$/.test(p.nat)) e.push(`${x.id} : nationalité invalide pour ${p.name}.`);
         });
         if (x.players.length > 4) e.push(`${x.id} : plus de 4 joueurs.`);
       });

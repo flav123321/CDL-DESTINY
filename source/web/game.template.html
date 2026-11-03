@@ -33,6 +33,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .who{min-width:0;flex:1 1 200px}
 .who h1{font-size:30px;overflow-wrap:anywhere}
 .wrank{color:var(--accent);font-size:.8em}
+.flag{margin-right:5px;font-style:normal;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 table.palm tfoot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 table.palm th:first-child,table.palm td:first-child{width:auto}
 .nums{display:flex;flex-wrap:wrap;gap:6px 20px}
@@ -145,8 +146,13 @@ section{min-width:0}
 const DEFAULT_CONTENT=/*__DEFAULT_CONTENT__*/null;
 const STEPS=[["prep","Intersaison","P"],["m0","Major I","1"],["off","Hors-jeu","H"],["m1","Major II","2"],["train","Training","T"],["m2","Major III","3"],["off","Hors-jeu","H"],["m3","Major IV","4"],["champs","Champs","C"],["merc","Mercato","M"]];
 const STAT={aim:"Aim",move:"Mouvement",sense:"Game sense",mental:"Mental",morale:"Moral",fame:"Popularité",money:"Argent",form:"Forme",chem:"Coéquipiers"};
-const COLORS={};
-const collectColors=c=>c.teams.cdl.concat(c.teams.challengers).forEach(t=>{if(t.color)COLORS[t.id]=t.color});
+const COLORS={},PLAYER_NATS={},REAL_NAMES=new Set(["Arian"]); // Arian reste dans les carrières déjà commencées
+const NAT_CODES={"France":"FR","Belgique":"BE","Suisse":"CH","Canada":"CA","Québec":"CA","États-Unis":"US","Royaume-Uni":"GB","Espagne":"ES","Portugal":"PT","Italie":"IT","Allemagne":"DE","Pays-Bas":"NL","Maroc":"MA","Algérie":"DZ","Tunisie":"TN","Sénégal":"SN","Mexique":"MX","Brésil":"BR","Japon":"JP","Australie":"AU"};
+const FICTIONAL_NATS=["US","US","US","GB","CA","FR","ES","DE","IT","AU","MX","BR","NL","BE","PT","MA"];
+const collectColors=c=>{c.teams.cdl.concat(c.teams.challengers).forEach(t=>{if(t.color)COLORS[t.id]=t.color});c.teams.cdl.flatMap(t=>t.players).concat(c.teams.freeAgents||[]).forEach(p=>{REAL_NAMES.add(p.name);if(p.nat)PLAYER_NATS[p.name]=p.nat})};
+const natCode=n=>{if(PLAYER_NATS[n])return PLAYER_NATS[n];if(REAL_NAMES.has(n))return null;let h=0;for(const c of n)h=(h*31+c.codePointAt(0))>>>0;return FICTIONAL_NATS[h%FICTIONAL_NATS.length]};
+const flagOf=code=>code?`<span class="flag" aria-hidden="true">${[...code].map(c=>String.fromCodePoint(0x1F1E6+c.charCodeAt(0)-65)).join("")}</span>`:"";
+const pFlag=p=>p.me?flagOf(NAT_CODES[S.me.nat]):flagOf(natCode(p.n));
 const tColor=id=>COLORS[id]||"#5b6b72";
 function tInk(id){const h=tColor(id).slice(1),n=[0,2,4].map(i=>parseInt(h.substr(i,2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*n[0]+.7152*n[1]+.0722*n[2]>.28?"#10181b":"#ffffff"}
 const tDot=id=>`<i class="dot" style="background:${tColor(id)}"></i>`;
@@ -436,7 +442,7 @@ function hud(){
  const m=S.me,t=myTeam();
  return`<header class="hud">
   <div class="ovr mono" style="font-family:var(--display)" title="Note générale">${Math.round(ovr())}</div>
-  <div class="who"><h1>${esc(m.name)} <span class="wrank" title="Classement mondial">#${myRank()}</span></h1><div class="dim" style="font-size:14px">${tDot(t.id)}${t.n} · ${lgName(t.lg)} · ${ROLES[m.role].l} · ${m.age} ans · ${esc(m.nat)}</div></div>
+  <div class="who"><h1>${pFlag({me:true})}${esc(m.name)} <span class="wrank" title="Classement mondial">#${myRank()}</span></h1><div class="dim" style="font-size:14px">${tDot(t.id)}${t.n} · ${lgName(t.lg)} · ${ROLES[m.role].l} · ${m.age} ans · ${esc(m.nat)}</div></div>
   <div class="nums">
    <div><b>${S.year}</b><span class="lab">Saison</span></div>
    <div><b>${m.kn?fr(kd(m),2):"–"}</b><span class="lab">K/D</span></div>
@@ -476,7 +482,7 @@ function reviewView(){
   ${tBand(t.id,t.n,Math.round(o.str))}
   <div class="kv"><span class="dim">Salaire</span><span>${usd(o.sal)}</span></div>
   <div class="kv"><span class="dim">Classement ${S.year}</span><span>${ord(pos)} ${lgName(t.lg)}</span></div>
-  <div class="kv"><span class="dim">Avec toi</span><span>Remplace ${esc(o.out)}</span></div>
+  <div class="kv"><span class="dim">Avec toi</span><span>Remplace ${pFlag({n:o.out})}${esc(o.out)}</span></div>
   <div class="kv"><span class="dim">Coéquipiers</span><span>Repart à ${RULES.retention.newTeamChem}</span></div>
  </button>`};
  const keepBlock=r=>{const n=esc(r.teamN);
@@ -570,11 +576,11 @@ function footerCareer(){
  </section>`;
 }
 function equipesView(){
- const card=t=>`<div class="card ${t.id===S.teamId?"me":""}">${tBand(t.id,t.n,Math.round(teamStr(t,false)))}<ol>${rosterSorted(t).map(p=>`<li class="${p.me?"me":""}"><span>${esc(p.n)}${p.f?' <span class="fic">fictif</span>':""}</span><span class="mono">${Math.round(p.r)}</span></li>`).join("")}</ol></div>`;
+ const card=t=>`<div class="card ${t.id===S.teamId?"me":""}">${tBand(t.id,t.n,Math.round(teamStr(t,false)))}<ol>${rosterSorted(t).map(p=>`<li class="${p.me?"me":""}"><span>${pFlag(p)}${esc(p.n)}${p.f?' <span class="fic">fictif</span>':""}</span><span class="mono">${Math.round(p.r)}</span></li>`).join("")}</ol></div>`;
  const fa=S.fa.slice().sort((a,b)=>b.r-a.r).slice(0,8);
  return`<div class="stack"><section><h2 style="font-size:34px;margin-bottom:8px">CDL</h2><div class="grid">${league("CDL").slice().sort((a,b)=>teamStr(b,false)-teamStr(a,false)).map(card).join("")}</div></section>
  <section><h2 style="font-size:34px;margin-bottom:8px">Challengers</h2><div class="grid">${league("CH").map(card).join("")}</div></section>
- ${fa.length?`<section><div class="lab">Sans équipe</div><div style="margin-top:4px">${fa.map(p=>esc(p.n)+" ("+Math.round(p.r)+")").join(" · ")}</div></section>`:""}
+ ${fa.length?`<section><div class="lab">Sans équipe</div><div style="margin-top:4px">${fa.map(p=>pFlag(p)+esc(p.n)+" ("+Math.round(p.r)+")").join(" · ")}</div></section>`:""}
  <p class="fine">Les notes sont mes estimations pour le jeu, pas des chiffres officiels. Les effectifs viennent des listes publiées fin octobre 2026. Ils évoluent ensuite selon la simulation, sans rapport avec la réalité.</p></div>`;
 }
 function matchsView(){
@@ -595,8 +601,8 @@ function classementView(){
  const tb=l=>l.slice().sort((a,b)=>b.pts-a.pts);
  return`<div class="stack"><div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
  <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Équipes CDL</h2><table><thead><tr><th>#</th><th>Équipe</th><th>V-D</th><th>Pts</th></tr></thead><tbody>${tb(league("CDL")).map((t,i)=>`<tr class="${t.id===S.teamId?"mine":""} ${i===RULES.qualifiers.CDL-1?"cut":""}"><td>${i+1}</td><td>${tDot(t.id)}${t.n}</td><td>${t.w}-${t.l}</td><td>${t.pts}</td></tr>`).join("")}</tbody></table><p class="fine" style="margin-top:6px">Le trait marque la qualification pour Champs (${RULES.qualifiers.CDL} premiers).</p></section>
- <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Classement mondial</h2>${(()=>{const all=worldRanking(),i=all.findIndex(p=>p.me),top=all.slice(0,10).map((p,x)=>[p,x+1]);if(i>=10)top.push([all[i],i+1]);return`<table><thead><tr><th>#</th><th>Joueur</th><th>Équipe</th></tr></thead><tbody>${top.map(([p,r])=>`<tr class="${p.me?"mine":""}"><td>${r}</td><td>${esc(p.n)}</td><td style="text-align:left">${tDot(p.id)}${esc(p.t)}</td></tr>`).join("")}</tbody></table>`})()}</section>
- <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Top K/D CDL</h2>${S.seasonEvents.length?`<table><thead><tr><th>#</th><th>Joueur</th><th>Équipe</th><th>K/D</th></tr></thead><tbody>${pls.slice(0,12).map((p,i)=>`<tr class="${p.me?"mine":""}"><td>${i+1}</td><td>${esc(p.n)}</td><td style="text-align:left">${esc(p.t)}</td><td>${fr(p.kd,2)}</td></tr>`).join("")}</tbody></table>`:'<p class="dim">Les K/D arrivent après le premier Major.</p>'}</section>
+ <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Classement mondial</h2>${(()=>{const all=worldRanking(),i=all.findIndex(p=>p.me),top=all.slice(0,10).map((p,x)=>[p,x+1]);if(i>=10)top.push([all[i],i+1]);return`<table><thead><tr><th>#</th><th>Joueur</th><th>Équipe</th></tr></thead><tbody>${top.map(([p,r])=>`<tr class="${p.me?"mine":""}"><td>${r}</td><td>${pFlag(p)}${esc(p.n)}</td><td style="text-align:left">${tDot(p.id)}${esc(p.t)}</td></tr>`).join("")}</tbody></table>`})()}</section>
+ <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Top K/D CDL</h2>${S.seasonEvents.length?`<table><thead><tr><th>#</th><th>Joueur</th><th>Équipe</th><th>K/D</th></tr></thead><tbody>${pls.slice(0,12).map((p,i)=>`<tr class="${p.me?"mine":""}"><td>${i+1}</td><td>${pFlag(p)}${esc(p.n)}</td><td style="text-align:left">${esc(p.t)}</td><td>${fr(p.kd,2)}</td></tr>`).join("")}</tbody></table>`:'<p class="dim">Les K/D arrivent après le premier Major.</p>'}</section>
  </div>
  <section class="scroll"><h2 style="font-size:34px;margin-bottom:6px">Challengers</h2><table style="max-width:520px"><thead><tr><th>#</th><th>Équipe</th><th>V-D</th><th>Pts</th></tr></thead><tbody>${tb(league("CH")).map((t,i)=>`<tr class="${t.id===S.teamId?"mine":""} ${i===RULES.qualifiers.CH-1?"cut":""}"><td>${i+1}</td><td>${tDot(t.id)}${t.n}</td><td>${t.w}-${t.l}</td><td>${t.pts}</td></tr>`).join("")}</tbody></table></section></div>`;
 }
