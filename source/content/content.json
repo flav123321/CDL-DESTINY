@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 3,
+ "revision": 4,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "Drapeaux des joueurs et correction de l'effectif de Cloud9.",
+ "notes": "Tous les joueurs réels ont maintenant leur drapeau.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -313,7 +313,8 @@
      },
      {
       "name": "Abuzah",
-      "rating": 84
+      "rating": 84,
+      "nat": "BE"
      }
     ],
     "color": "#E2231A"
@@ -414,7 +415,8 @@
      },
      {
       "name": "Kips",
-      "rating": 83
+      "rating": 83,
+      "nat": "US"
      },
      {
       "name": "RenKoR",
@@ -530,7 +532,8 @@
      },
      {
       "name": "Noysii",
-      "rating": 76
+      "rating": 76,
+      "nat": "US"
      }
     ],
     "color": "#00AEEF"
@@ -547,11 +550,13 @@
      },
      {
       "name": "Craze",
-      "rating": 78
+      "rating": 78,
+      "nat": "US"
      },
      {
       "name": "Mamba",
-      "rating": 78
+      "rating": 78,
+      "nat": "US"
      },
      {
       "name": "Lunarz",
@@ -573,11 +578,13 @@
      },
      {
       "name": "Exceed",
-      "rating": 76
+      "rating": 76,
+      "nat": "US"
      },
      {
       "name": "Lurqxx",
-      "rating": 76
+      "rating": 76,
+      "nat": "US"
      }
     ],
     "color": "#1C5DAB"
@@ -641,7 +648,8 @@
    },
    {
     "name": "Sib",
-    "rating": 76
+    "rating": 76,
+    "nat": "US"
    }
   ]
  },
