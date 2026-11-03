@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 1,
+ "revision": 2,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "Première version synchronisée.",
+ "notes": "38 nouvelles décisions et 3 nouveaux parcours.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -150,6 +150,33 @@
     "aim": -2
    },
    "story": "Salles municipales, câbles scotchés, trois spectateurs. La pression, tu connais depuis tes 14 ans."
+  },
+  "mobile": {
+   "label": "Venu du jeu mobile",
+   "summary": "+ Mouvement, − Mental",
+   "attributes": {
+    "move": 3,
+    "mental": -1
+   },
+   "story": "Tu as tout appris sur un téléphone, dans des tournois en ligne que personne ne regardait. Passer sur grand écran, c'est ta revanche."
+  },
+  "academie": {
+   "label": "Formé dans une académie",
+   "summary": "+ Game sense, − Aim",
+   "attributes": {
+    "sense": 3,
+    "aim": -1
+   },
+   "story": "Des années d'académie, de VOD et de coachs exigeants. Tu n'es pas le plus flashy, mais tu sais exactement où te placer."
+  },
+  "streamer": {
+   "label": "Streamer devenu pro",
+   "summary": "+ Aim, − Game sense",
+   "attributes": {
+    "aim": 3,
+    "sense": -1
+   },
+   "story": "Ta communauté t'a porté jusqu'ici. Maintenant, tu dois prouver que tu n'es pas qu'un personnage de stream."
   }
  },
  "nationalities": [
@@ -257,7 +284,8 @@
       "name": "Huke",
       "rating": 88
      }
-    ]
+    ],
+    "color": "#93C83E"
    },
    {
     "id": "FAZ",
@@ -280,7 +308,8 @@
       "name": "Abuzah",
       "rating": 84
      }
-    ]
+    ],
+    "color": "#E2231A"
    },
    {
     "id": "LAT",
@@ -303,7 +332,8 @@
       "name": "Nium",
       "rating": 84
      }
-    ]
+    ],
+    "color": "#E8112D"
    },
    {
     "id": "RYD",
@@ -326,7 +356,8 @@
       "name": "Exnid",
       "rating": 80
      }
-    ]
+    ],
+    "color": "#00A651"
    },
    {
     "id": "PAR",
@@ -349,7 +380,8 @@
       "name": "JoeDeceives",
       "rating": 80
      }
-    ]
+    ],
+    "color": "#E9E6E0"
    },
    {
     "id": "TOR",
@@ -372,7 +404,8 @@
       "name": "Ethan",
       "rating": 76
      }
-    ]
+    ],
+    "color": "#3F63E0"
    },
    {
     "id": "MIN",
@@ -395,7 +428,8 @@
       "name": "Kremp",
       "rating": 78
      }
-    ]
+    ],
+    "color": "#D71920"
    },
    {
     "id": "MIA",
@@ -414,7 +448,8 @@
       "name": "ReeaL",
       "rating": 80
      }
-    ]
+    ],
+    "color": "#FFC400"
    },
    {
     "id": "BOS",
@@ -437,7 +472,8 @@
       "name": "Spart",
       "rating": 78
      }
-    ]
+    ],
+    "color": "#F26A21"
    },
    {
     "id": "C9N",
@@ -460,7 +496,8 @@
       "name": "Noysii",
       "rating": 76
      }
-    ]
+    ],
+    "color": "#00AEEF"
    },
    {
     "id": "VAN",
@@ -483,7 +520,8 @@
       "name": "Lunarz",
       "rating": 76
      }
-    ]
+    ],
+    "color": "#00B2A9"
    },
    {
     "id": "CAR",
@@ -502,49 +540,58 @@
       "name": "Lurqxx",
       "rating": 76
      }
-    ]
+    ],
+    "color": "#1C5DAB"
    }
   ],
   "challengers": [
    {
     "id": "NFA",
     "name": "Nightfall Academy",
-    "prestige": 40
+    "prestige": 40,
+    "color": "#7A5CD6"
    },
    {
     "id": "EMB",
     "name": "Ember GG",
-    "prestige": 36
+    "prestige": 36,
+    "color": "#E0632A"
    },
    {
     "id": "RFT",
     "name": "Rift Seven",
-    "prestige": 38
+    "prestige": 38,
+    "color": "#2BB5A0"
    },
    {
     "id": "CLD",
     "name": "Cold Front",
-    "prestige": 34
+    "prestige": 34,
+    "color": "#6FB7E9"
    },
    {
     "id": "NOI",
     "name": "Noir Esports",
-    "prestige": 35
+    "prestige": 35,
+    "color": "#B9B4AE"
    },
    {
     "id": "STA",
     "name": "Static",
-    "prestige": 32
+    "prestige": 32,
+    "color": "#D9C531"
    },
    {
     "id": "VNT",
     "name": "Vanta Gaming",
-    "prestige": 37
+    "prestige": 37,
+    "color": "#A34FC2"
    },
    {
     "id": "KIL",
     "name": "Kilo Squad",
-    "prestige": 33
+    "prestige": 33,
+    "color": "#7FA04A"
    }
   ],
   "freeAgents": [
@@ -1467,6 +1514,1282 @@
      "impact": 1.5,
      "win": "Tu obtiens trois minutes et tu joues sereinement.",
      "lose": "Refusé. Tu pars énervé."
+    }
+   ]
+  },
+  {
+   "id": "prep-le-nouvel-appart",
+   "pool": "prep",
+   "title": "Le nouvel appart",
+   "text": "Tu peux enfin quitter la chambre où tu jouais depuis tes débuts. Le budget va vite y passer.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Prendre un appart près de la salle de l'équipe",
+     "effects": {
+      "chem": 6,
+      "money": -8000,
+      "morale": 3
+     }
+    },
+    {
+     "id": "b",
+     "label": "Rester encore un an, garder ta routine",
+     "effects": {
+      "money": 4000,
+      "form": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Tout investir dans une vraie pièce de jeu",
+     "effects": {
+      "aim": 2,
+      "money": -6000,
+      "morale": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-coach-a-l-essai",
+   "pool": "prep",
+   "title": "Coach à l'essai",
+   "text": "Le staff change. Le nouveau coach veut tout reprendre depuis les bases.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Jouer le jeu et repartir de zéro",
+     "effects": {
+      "sense": 3,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Lui montrer tes idées dès le premier jour",
+     "effects": {
+      "sense": 1,
+      "chem": 3,
+      "fame": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Attendre de voir ce qu'il vaut",
+     "effects": {
+      "mental": 1,
+      "chem": -3
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-la-pause-qui-fait-du-bien",
+   "pool": "prep",
+   "title": "La pause qui fait du bien",
+   "text": "Tes proches organisent une semaine de vacances. Le reste de la ligue, lui, joue déjà en ligne.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Partir, sans ton setup",
+     "effects": {
+      "morale": 12,
+      "form": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Partir, mais emporter un portable pour jouer le soir",
+     "effects": {
+      "morale": 5,
+      "aim": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Refuser et rester au charbon",
+     "effects": {
+      "aim": 2,
+      "sense": 1,
+      "morale": -5
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-tournoi-d-ete",
+   "pool": "prep",
+   "title": "Tournoi d'été",
+   "text": "Un petit tournoi en LAN propose de bonnes primes, mais il tombe pile pendant ta préparation.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Y aller pour la compétition",
+     "effects": {
+      "mental": 2,
+      "money": 5000,
+      "form": 1,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Y aller pour tester de nouvelles choses",
+     "effects": {
+      "move": 2,
+      "sense": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Passer ton tour et rester à l'entraînement",
+     "effects": {
+      "aim": 2,
+      "form": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-changer-de-manette",
+   "pool": "prep",
+   "title": "Changer de manette",
+   "text": "Un fabricant propose de te faire une manette sur mesure. Il faut trois semaines pour s'y habituer.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter le sur-mesure",
+     "effects": {
+      "move": 3,
+      "form": -2,
+      "fame": 1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Garder ta vieille manette",
+     "effects": {
+      "form": 2,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Tester les deux jusqu'à la reprise",
+     "effects": {
+      "aim": 1,
+      "move": 1,
+      "mental": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-discussion-avec-le-capitaine",
+   "pool": "prep",
+   "title": "Discussion avec le capitaine",
+   "text": "Il veut savoir ce que tu attends de la saison. Et ce que l'équipe peut attendre de toi.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Annoncer que tu veux être le meilleur de l'équipe",
+     "effects": {
+      "fame": 3,
+      "chem": -3,
+      "morale": 3
+     }
+    },
+    {
+     "id": "b",
+     "label": "Dire que tu feras ce qu'il faut pour gagner",
+     "effects": {
+      "chem": 7
+     }
+    },
+    {
+     "id": "c",
+     "label": "Lui demander ce qu'il voit, lui, comme axe de progrès",
+     "effects": {
+      "sense": 2,
+      "chem": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-scrims-contre-le-leader",
+   "pool": "train",
+   "title": "Scrims contre le leader",
+   "text": "L'équipe du haut de tableau accepte une session contre vous. Ils ne vous feront aucun cadeau.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Jouer à fond et encaisser",
+     "effects": {
+      "mental": 2,
+      "sense": 2,
+      "morale": -3
+     }
+    },
+    {
+     "id": "b",
+     "label": "Tester des strats sans se dévoiler",
+     "effects": {
+      "sense": 2,
+      "chem": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Garder tes meilleurs plans pour le Major",
+     "effects": {
+      "form": 2,
+      "fame": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-le-carnet-de-notes",
+   "pool": "train",
+   "title": "Le carnet de notes",
+   "text": "Un joueur vétéran conseille de noter chaque erreur après chaque partie. Ça prend une heure par soir.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Le faire tous les soirs",
+     "effects": {
+      "sense": 3,
+      "mental": 1,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Le faire seulement après les défaites",
+     "effects": {
+      "sense": 2,
+      "morale": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Laisser ça au staff",
+     "effects": {
+      "morale": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-routine-du-matin",
+   "pool": "train",
+   "title": "Routine du matin",
+   "text": "Le préparateur te propose de te lever à 8 h et de t'échauffer 30 minutes avant de jouer.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Tenir le programme",
+     "effects": {
+      "form": 2,
+      "mental": 2,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "L'adapter à ton rythme",
+     "effects": {
+      "form": 1,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Refuser : tu joues mieux la nuit",
+     "effects": {
+      "aim": 1,
+      "chem": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-echange-de-role",
+   "pool": "train",
+   "title": "Échange de rôle",
+   "text": "Pendant une semaine, le coach te fait jouer l'autre poste pour mieux comprendre tes coéquipiers.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter sérieusement",
+     "effects": {
+      "sense": 3,
+      "chem": 3,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Accepter, mais revenir vite à ton rôle",
+     "effects": {
+      "sense": 1,
+      "chem": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Dire non, ce n'est pas le moment",
+     "effects": {
+      "form": 1,
+      "chem": -3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-serveurs-prives",
+   "pool": "train",
+   "title": "Serveurs privés",
+   "text": "Quelques pros montent des parties à 2 h du matin. Le niveau est énorme.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Y aller toute la semaine",
+     "effects": {
+      "aim": 3,
+      "form": -2,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Y passer deux soirs",
+     "effects": {
+      "aim": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Dormir, le reste suivra",
+     "effects": {
+      "form": 2,
+      "morale": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-le-jeune-de-l-academie",
+   "pool": "train",
+   "title": "Le jeune de l'académie",
+   "text": "Un prospect de 16 ans arrive en scrims. Il te met deux cartes d'affilée.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Le prendre sous ton aile",
+     "effects": {
+      "chem": 6,
+      "mental": 2,
+      "fame": 1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Le défier en 1v1 après la séance",
+     "effects": {
+      "aim": 2,
+      "morale": 2,
+      "chem": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Doubler tes heures de jeu sans rien dire",
+     "effects": {
+      "aim": 2,
+      "move": 1,
+      "morale": -3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-revoir-le-s-d",
+   "pool": "train",
+   "title": "Revoir le S&D",
+   "text": "Votre taux de victoire au round 1 est faible. Le staff te demande de proposer quelque chose.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Préparer trois ouvertures pour l'équipe",
+     "effects": {
+      "sense": 3,
+      "chem": 3,
+      "morale": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Bosser ton propre premier duel",
+     "effects": {
+      "aim": 2,
+      "move": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Laisser le coach décider",
+     "effects": {
+      "mental": 1,
+      "fame": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-le-podcast",
+   "pool": "off",
+   "title": "Le podcast",
+   "text": "Un gros podcast t'invite. On risque de te demander ce que tu penses vraiment de la ligue.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Dire tout ce que tu penses",
+     "effects": {
+      "fame": 9,
+      "chem": -4,
+      "mental": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Rester sympa et prudent",
+     "effects": {
+      "fame": 4,
+      "morale": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Décliner",
+     "effects": {
+      "form": 1,
+      "fame": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-ton-maillot-en-boutique",
+   "pool": "off",
+   "title": "Ton maillot en boutique",
+   "text": "L'équipe veut lancer une collection à ton nom. Il faut poser pour les photos en pleine semaine de scrims.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter, c'est un rêve de gosse",
+     "effects": {
+      "fame": 6,
+      "money": 8000,
+      "morale": 5,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Accepter, mais après le Major",
+     "effects": {
+      "fame": 3,
+      "money": 3000
+     }
+    },
+    {
+     "id": "c",
+     "label": "Refuser, tu n'as encore rien gagné",
+     "effects": {
+      "mental": 2,
+      "chem": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-le-pote-d-avant",
+   "pool": "off",
+   "title": "Le pote d'avant",
+   "text": "Un ami de tes débuts est en galère. Il te demande de le faire venir dans ton entourage.",
+   "options": [
+    {
+     "id": "a",
+     "label": "L'aider et lui trouver une place",
+     "effects": {
+      "morale": 7,
+      "money": -4000,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Lui prêter un peu d'argent",
+     "effects": {
+      "morale": 3,
+      "money": -2000
+     }
+    },
+    {
+     "id": "c",
+     "label": "Lui expliquer que ce n'est pas le moment",
+     "effects": {
+      "form": 1,
+      "morale": -3
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-offre-de-createur",
+   "pool": "off",
+   "title": "Offre de créateur",
+   "text": "Une agence propose de gérer tes réseaux, contre un bon pourcentage.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Signer et laisser l'agence travailler",
+     "effects": {
+      "fame": 7,
+      "money": -3000
+     }
+    },
+    {
+     "id": "b",
+     "label": "Gérer tes réseaux toi-même",
+     "effects": {
+      "fame": 3,
+      "form": -1,
+      "money": 2000
+     }
+    },
+    {
+     "id": "c",
+     "label": "Poster moins et te concentrer",
+     "effects": {
+      "form": 2,
+      "fame": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-soiree-apres-le-major",
+   "pool": "off",
+   "title": "Soirée après le Major",
+   "text": "Tout le monde sort fêter la fin du week-end. Le vol retour est tôt demain.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Sortir avec l'équipe jusqu'au bout",
+     "effects": {
+      "chem": 7,
+      "morale": 5,
+      "form": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Passer une heure et rentrer",
+     "effects": {
+      "chem": 3,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Rester à l'hôtel et dormir",
+     "effects": {
+      "form": 2,
+      "chem": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-le-fan-qui-t-ecrit",
+   "pool": "off",
+   "title": "Le fan qui t'écrit",
+   "text": "Un jeune fan t'envoie un long message : il joue grâce à toi, et il traverse une période difficile.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Prendre le temps de lui répondre",
+     "effects": {
+      "morale": 6,
+      "fame": 2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Lui envoyer ton maillot signé",
+     "effects": {
+      "morale": 4,
+      "fame": 3,
+      "money": -500
+     }
+    },
+    {
+     "id": "c",
+     "label": "Partager un message pour tous tes fans",
+     "effects": {
+      "fame": 4
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-l-interview-qui-derape",
+   "pool": "off",
+   "title": "L'interview qui dérape",
+   "text": "Un journaliste coupe ta phrase. Le titre laisse entendre que tu critiques ton coach.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Publier une mise au point",
+     "effects": {
+      "chem": 4,
+      "fame": 2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Aller voir le coach directement",
+     "effects": {
+      "chem": 7,
+      "morale": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Laisser passer la tempête",
+     "effects": {
+      "mental": 2,
+      "chem": -4
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-vie-a-deux",
+   "pool": "off",
+   "title": "Vie à deux",
+   "text": "Ta vie perso prend de la place, et les longues soirées de scrims commencent à peser.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Poser des horaires clairs",
+     "effects": {
+      "morale": 8,
+      "form": 1,
+      "sense": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Tout donner au jeu cette saison",
+     "effects": {
+      "aim": 2,
+      "morale": -6
+     }
+    },
+    {
+     "id": "c",
+     "label": "En parler et trouver un compromis",
+     "effects": {
+      "morale": 4,
+      "mental": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-investir-tes-gains",
+   "pool": "off",
+   "title": "Investir tes gains",
+   "text": "Un conseiller te présente plusieurs options pour ton argent. L'une a l'air trop belle.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Placer une partie à long terme",
+     "effects": {
+      "money": -5000,
+      "mental": 2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Tenter le coup risqué",
+     "effects": {
+      "money": 12000,
+      "morale": -4,
+      "form": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Tout garder de côté pour le moment",
+     "effects": {
+      "money": 2000
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-tournoi-caritatif",
+   "pool": "off",
+   "title": "Tournoi caritatif",
+   "text": "Une grosse association monte un tournoi en ligne avec des pros et des créateurs.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Jouer et animer le stream",
+     "effects": {
+      "fame": 6,
+      "morale": 4,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Faire un don et rester en retrait",
+     "effects": {
+      "money": -3000,
+      "morale": 5
+     }
+    },
+    {
+     "id": "c",
+     "label": "Décliner pour préparer le Major",
+     "effects": {
+      "form": 2,
+      "fame": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-un-coequipier-veut-partir",
+   "pool": "off",
+   "title": "Un coéquipier veut partir",
+   "text": "Il te confie qu'il pense quitter l'équipe à la fin de la saison. Personne d'autre n'est au courant.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Garder le secret et le soutenir",
+     "effects": {
+      "chem": 5,
+      "morale": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Le pousser à en parler au coach",
+     "effects": {
+      "chem": 2,
+      "sense": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Prévenir le staff toi-même",
+     "effects": {
+      "chem": -7,
+      "fame": 1,
+      "form": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-voyage-en-europe",
+   "pool": "off",
+   "title": "Voyage en Europe",
+   "text": "Un partenaire t'invite à un événement à Paris, entre deux tournois. Le décalage horaire est sévère.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Y aller, c'est une super vitrine",
+     "effects": {
+      "fame": 7,
+      "money": 6000,
+      "form": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Y aller un seul jour",
+     "effects": {
+      "fame": 3,
+      "money": 2000,
+      "form": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Rester chez toi",
+     "effects": {
+      "form": 2,
+      "morale": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-le-rituel-d-avant-match",
+   "pool": "off",
+   "title": "Le rituel d'avant-match",
+   "text": "Depuis ta dernière grosse perf, tu refais tout exactement pareil. Ton entourage commence à en rire.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Garder ton rituel, tant pis",
+     "effects": {
+      "mental": 2,
+      "morale": 2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Le casser pour ne plus en dépendre",
+     "effects": {
+      "mental": 3,
+      "form": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "En faire une série de vidéos",
+     "effects": {
+      "fame": 5,
+      "morale": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-sommeil-en-vrac",
+   "pool": "off",
+   "title": "Sommeil en vrac",
+   "text": "Tu dors mal depuis deux semaines. Le coach le voit à tes réflexes en scrims.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Couper les écrans le soir",
+     "effects": {
+      "form": 2,
+      "fame": -1,
+      "morale": 1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Voir un spécialiste du sommeil",
+     "effects": {
+      "form": 3,
+      "money": -3000
+     }
+    },
+    {
+     "id": "c",
+     "label": "Boire plus de café et avancer",
+     "effects": {
+      "form": -1,
+      "aim": 1,
+      "morale": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-la-place-de-chouchou",
+   "pool": "off",
+   "title": "La place de chouchou",
+   "text": "Le coach veut bâtir l'équipe autour de toi. Les autres risquent de le prendre mal.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter et assumer",
+     "effects": {
+      "fame": 4,
+      "morale": 4,
+      "chem": -6
+     }
+    },
+    {
+     "id": "b",
+     "label": "Demander que ça reste collectif",
+     "effects": {
+      "chem": 6,
+      "morale": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Accepter, et aider les autres à s'y retrouver",
+     "effects": {
+      "sense": 1,
+      "chem": 1,
+      "morale": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "clutch-le-rush-surprise",
+   "pool": "clutch",
+   "title": "Le rush surprise",
+   "text": "S&D, tu défends seul le site B. Tu entends trois paires de pas arriver très vite.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Tenir l'angle et prendre le premier",
+     "stat": "aim",
+     "difficulty": -0.05,
+     "impact": 2.5,
+     "win": "Tu les prends un par un dans la porte. Le chat explose.",
+     "lose": "Trop nombreux, trop rapides. Le site tombe."
+    },
+    {
+     "id": "b",
+     "label": "Reculer et attendre la pose",
+     "stat": "sense",
+     "difficulty": 0.02,
+     "impact": 2,
+     "win": "Tu les laisses poser, puis tu nettoies tout en silence.",
+     "lose": "Ils couvrent mieux que prévu et tu tombes en essayant de revenir."
+    },
+    {
+     "id": "c",
+     "label": "Lancer tout ton matos et bouger",
+     "stat": "move",
+     "difficulty": -0.08,
+     "impact": 2.5,
+     "win": "Tu sèmes le chaos assez longtemps pour que l'aide arrive.",
+     "lose": "Ton matos ne touche personne, et tu te retrouves à découvert."
+    }
+   ]
+  },
+  {
+   "id": "clutch-le-spawn-qui-bascule",
+   "pool": "clutch",
+   "title": "Le spawn qui bascule",
+   "text": "Hardpoint. Vous contrôlez le spawn, mais deux adversaires viennent de passer derrière vous.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Retourner les chercher",
+     "stat": "aim",
+     "difficulty": 0,
+     "impact": 2,
+     "win": "Tu les coupes net, et le spawn reste à vous.",
+     "lose": "Tu les rates et l'équipe se fait prendre en sandwich."
+    },
+    {
+     "id": "b",
+     "label": "Rester sur la zone et jouer le score",
+     "stat": "mental",
+     "difficulty": 0.05,
+     "impact": 1.5,
+     "win": "Vous gardez le sang-froid, et les points tombent.",
+     "lose": "Le spawn casse et vous perdez la moitié de votre avance."
+    },
+    {
+     "id": "c",
+     "label": "Annoncer un repli complet vers la zone suivante",
+     "stat": "sense",
+     "difficulty": -0.03,
+     "impact": 2.5,
+     "win": "Tout le monde arrive avant eux. La carte est jouée.",
+     "lose": "Le repli arrive trop tôt, et ils vous cueillent."
+    }
+   ]
+  },
+  {
+   "id": "clutch-le-pistolet-en-dernier-recours",
+   "pool": "clutch",
+   "title": "Le pistolet en dernier recours",
+   "text": "Plus de balles, ton arme principale est vide, et il reste un adversaire blessé devant toi.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Sortir le pistolet et duel",
+     "stat": "aim",
+     "difficulty": -0.1,
+     "impact": 3,
+     "win": "Trois balles, trois dans la tête. La salle se lève.",
+     "lose": "Il était moins blessé que prévu."
+    },
+    {
+     "id": "b",
+     "label": "Jouer la peur avec une grenade",
+     "stat": "sense",
+     "difficulty": -0.03,
+     "impact": 2,
+     "win": "Il recule, et ça te donne le temps de recharger.",
+     "lose": "La grenade rebondit à côté. Il te finit."
+    },
+    {
+     "id": "c",
+     "label": "Te cacher et recharger",
+     "stat": "mental",
+     "difficulty": 0.02,
+     "impact": 1.5,
+     "win": "Tu recharges au dernier moment et tu termines le round.",
+     "lose": "Il t'entend recharger et arrive sur toi."
+    }
+   ]
+  },
+  {
+   "id": "clutch-defaite-0-2-en-serie",
+   "pool": "clutch",
+   "title": "Défaite 0-2 en série",
+   "text": "La série peut s'arrêter sur cette carte. Tout le monde a les épaules basses dans la salle.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Rire et détendre tout le monde",
+     "stat": "mental",
+     "difficulty": -0.02,
+     "impact": 2.5,
+     "win": "Le ton change. Vous reprenez une carte, puis une autre.",
+     "lose": "Ta blague tombe à plat. La fin arrive vite."
+    },
+    {
+     "id": "b",
+     "label": "Prendre le premier duel de chaque round",
+     "stat": "aim",
+     "difficulty": -0.08,
+     "impact": 3,
+     "win": "Tu ouvres chaque round, et l'équipe se remet à y croire.",
+     "lose": "Tu tombes en premier trois fois de suite."
+    },
+    {
+     "id": "c",
+     "label": "Revenir au plan le plus simple",
+     "stat": "sense",
+     "difficulty": 0.06,
+     "impact": 1.5,
+     "win": "Vous arrêtez de forcer, et le jeu redevient clair.",
+     "lose": "Trop prévisible. Ils ont tout vu venir."
+    }
+   ]
+  },
+  {
+   "id": "clutch-le-4v1",
+   "pool": "clutch",
+   "title": "Le 4v1",
+   "text": "Vous êtes à quatre contre un. Sur le papier, c'est plié. Il reste 20 secondes.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Tout le monde push en même temps",
+     "stat": "move",
+     "difficulty": 0.1,
+     "impact": 1,
+     "win": "Round propre. Rien à signaler.",
+     "lose": "Il prend quatre kills. Tu vas revoir cette action longtemps."
+    },
+    {
+     "id": "b",
+     "label": "Le coincer lentement à deux",
+     "stat": "sense",
+     "difficulty": 0.08,
+     "impact": 1.5,
+     "win": "Vous fermez toutes ses sorties.",
+     "lose": "Trop lents : la bombe explose."
+    },
+    {
+     "id": "c",
+     "label": "Y aller seul, pour le clip",
+     "stat": "aim",
+     "difficulty": -0.2,
+     "impact": 3,
+     "win": "Le clip fait le tour des réseaux, et le round est gagné.",
+     "lose": "Le coach te regarde sans rien dire pendant dix secondes."
+    }
+   ]
+  },
+  {
+   "id": "clutch-le-lag-de-la-salle",
+   "pool": "clutch",
+   "title": "Le lag de la salle",
+   "text": "Une petite coupure réseau vous met en pause. Quand le jeu revient, tu n'as plus ton rythme.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Reprendre tranquillement, duel par duel",
+     "stat": "mental",
+     "difficulty": 0.03,
+     "impact": 2,
+     "win": "Tu retrouves tes sensations en deux minutes.",
+     "lose": "Tes premières balles partent à côté, et le momentum change."
+    },
+    {
+     "id": "b",
+     "label": "Forcer un gros duel pour te réveiller",
+     "stat": "aim",
+     "difficulty": -0.08,
+     "impact": 2.5,
+     "win": "Double kill immédiat : tu es de retour.",
+     "lose": "Tu forces, et tu offres deux kills de plus."
+    },
+    {
+     "id": "c",
+     "label": "Demander à l'équipe de jouer autour de toi",
+     "stat": "sense",
+     "difficulty": 0,
+     "impact": 1.5,
+     "win": "Ils te laissent respirer, et tu reviens fort.",
+     "lose": "Le groupe perd sa structure pendant quelques minutes."
+    }
+   ]
+  },
+  {
+   "id": "clutch-derniere-zone-dernier-chargeur",
+   "pool": "clutch",
+   "title": "Dernière zone, dernier chargeur",
+   "text": "Hardpoint. Il manque 10 points. Tu n'as plus de grenade et ton chargeur est presque vide.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Entrer sur la zone quand même",
+     "stat": "mental",
+     "difficulty": -0.06,
+     "impact": 3,
+     "win": "Tu tiens les 10 secondes. La carte est à vous.",
+     "lose": "Tu tombes au bout de 4 secondes."
+    },
+    {
+     "id": "b",
+     "label": "Contourner pour prendre le dos",
+     "stat": "move",
+     "difficulty": -0.05,
+     "impact": 2.5,
+     "win": "Ils ne te voient jamais arriver.",
+     "lose": "Le contournement prend trop de temps, ils marquent."
+    },
+    {
+     "id": "c",
+     "label": "Prendre une seconde pour recharger",
+     "stat": "sense",
+     "difficulty": 0.05,
+     "impact": 1.5,
+     "win": "Tu arrives prêt, juste au bon moment.",
+     "lose": "Ces deux secondes coûtent la zone."
+    }
+   ]
+  },
+  {
+   "id": "clutch-micro-ouvert",
+   "pool": "clutch",
+   "title": "Micro ouvert",
+   "text": "Tout le monde hurle dans le casque, et les calls se mélangent. Il faut remettre de l'ordre.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Crier plus fort que les autres",
+     "stat": "mental",
+     "difficulty": -0.08,
+     "impact": 2,
+     "win": "Tout le monde se tait et écoute. Ça repart.",
+     "lose": "Ça n'arrange rien. Ça crie encore plus."
+    },
+    {
+     "id": "b",
+     "label": "Couper court et donner un seul call",
+     "stat": "sense",
+     "difficulty": 0,
+     "impact": 2.5,
+     "win": "Un call clair, et tout le monde s'aligne.",
+     "lose": "Ton call arrive deux secondes trop tard."
+    },
+    {
+     "id": "c",
+     "label": "Te taire et jouer ton duel",
+     "stat": "aim",
+     "difficulty": 0.02,
+     "impact": 1.5,
+     "win": "Tu prends ton kill et ça calme tout le monde.",
+     "lose": "Tu joues seul et personne ne te couvre."
+    }
+   ]
+  },
+  {
+   "id": "clutch-la-lecture-du-coach-adverse",
+   "pool": "clutch",
+   "title": "La lecture du coach adverse",
+   "text": "Depuis le début, ils anticipent tous vos déplacements. Quelqu'un a compris vos habitudes.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Inverser toutes vos rotations",
+     "stat": "sense",
+     "difficulty": -0.06,
+     "impact": 3,
+     "win": "Ils arrivent toujours au mauvais endroit.",
+     "lose": "Votre équipe se perd aussi dans ces nouvelles rotations."
+    },
+    {
+     "id": "b",
+     "label": "Garder le plan et gagner les duels",
+     "stat": "aim",
+     "difficulty": 0,
+     "impact": 2,
+     "win": "Ils savent où vous allez, mais ils ne peuvent rien y faire.",
+     "lose": "Ils vous attendent, et ils gagnent les duels."
+    },
+    {
+     "id": "c",
+     "label": "Jouer plus vite qu'eux",
+     "stat": "move",
+     "difficulty": -0.04,
+     "impact": 2.5,
+     "win": "Ils n'ont plus le temps de réagir.",
+     "lose": "Le rythme vous fait faire des fautes."
+    }
+   ]
+  },
+  {
+   "id": "clutch-la-foule-contre-toi",
+   "pool": "clutch",
+   "title": "La foule contre toi",
+   "text": "Finale à domicile pour l'adversaire. Chaque kill que tu rates est célébré par toute la salle.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Faire taire la salle d'un geste",
+     "stat": "mental",
+     "difficulty": -0.1,
+     "impact": 3,
+     "win": "Tu prends le kill et tu mets le doigt sur la bouche. Énorme moment.",
+     "lose": "Tu rates juste après. Les réseaux adorent."
+    },
+    {
+     "id": "b",
+     "label": "Mettre le casque plus fort et oublier",
+     "stat": "mental",
+     "difficulty": 0.05,
+     "impact": 1.5,
+     "win": "Plus rien n'existe sauf le jeu.",
+     "lose": "La pression te rattrape quand même."
+    },
+    {
+     "id": "c",
+     "label": "T'appuyer sur tes coéquipiers",
+     "stat": "sense",
+     "difficulty": 0.02,
+     "impact": 2,
+     "win": "Vous jouez à quatre et la salle finit par se taire.",
+     "lose": "Vous restez trop passifs, et ils déroulent."
     }
    ]
   }

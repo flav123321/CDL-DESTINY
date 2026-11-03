@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "CDL Destiny",
+    "slug": "cdl-destiny",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0d1619",
+    "ios": { "bundleIdentifier": "com.tonpseudo.cdldestiny", "supportsTablet": true },
+    "android": {
+      "package": "com.tonpseudo.cdldestiny",
+      "adaptiveIcon": { "foregroundImage": "./assets/icon.png", "backgroundColor": "#0d1619" }
+    }
+  }
+}
