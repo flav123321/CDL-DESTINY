@@ -103,7 +103,9 @@ tr.cut td{border-bottom-color:var(--accent)}
 .card.me{outline:1px solid var(--accent)}
 .card h3.tband{margin:-13px -15px 4px;padding:9px 15px;align-items:center}
 .card h3.tband span{color:inherit}
-.dot{display:inline-block;width:10px;height:10px;margin-right:7px;vertical-align:baseline;flex:none}
+.badge{display:inline-grid;place-items:center;width:25px;height:27px;margin-right:7px;padding-bottom:4px;vertical-align:middle;flex:none;font:800 10.5px/1 var(--display);letter-spacing:.01em;clip-path:polygon(0 0,100% 0,100% 70%,50% 100%,0 70%)}
+.badge.big{width:37px;height:41px;margin-right:0;padding-bottom:6px;font-size:15px}
+.tname{display:flex;align-items:center;gap:10px;min-width:0}
 .card ol{list-style:none;margin:0;padding:0;font-size:14.5px}
 .card ol li{display:flex;justify-content:space-between;gap:8px;padding-block:2px}
 .card ol li.me{color:var(--accent);font-weight:600}
@@ -146,17 +148,19 @@ section{min-width:0}
 const DEFAULT_CONTENT=/*__DEFAULT_CONTENT__*/null;
 const STEPS=[["prep","Intersaison","P"],["m0","Major I","1"],["off","Hors-jeu","H"],["m1","Major II","2"],["train","Training","T"],["m2","Major III","3"],["off","Hors-jeu","H"],["m3","Major IV","4"],["champs","Champs","C"],["merc","Mercato","M"]];
 const STAT={aim:"Aim",move:"Mouvement",sense:"Game sense",mental:"Mental",morale:"Moral",fame:"Popularité",money:"Argent",form:"Forme",chem:"Coéquipiers"};
-const COLORS={},PLAYER_NATS={},REAL_NAMES=new Set(["Arian"]); // Arian reste dans les carrières déjà commencées
+const D=()=>({...DEFAULT_CONTENT.rules.difficulty,...(RULES&&RULES.difficulty||{})});
+const TAGS={},COLORS={},PLAYER_NATS={},REAL_NAMES=new Set(["Arian"]); // Arian reste dans les carrières déjà commencées
 const NAT_CODES={"France":"FR","Belgique":"BE","Suisse":"CH","Canada":"CA","Québec":"CA","États-Unis":"US","Royaume-Uni":"GB","Espagne":"ES","Portugal":"PT","Italie":"IT","Allemagne":"DE","Pays-Bas":"NL","Maroc":"MA","Algérie":"DZ","Tunisie":"TN","Sénégal":"SN","Mexique":"MX","Brésil":"BR","Japon":"JP","Australie":"AU"};
 const FICTIONAL_NATS=["US","US","US","GB","CA","FR","ES","DE","IT","AU","MX","BR","NL","BE","PT","MA"];
-const collectColors=c=>{c.teams.cdl.concat(c.teams.challengers).forEach(t=>{if(t.color)COLORS[t.id]=t.color});c.teams.cdl.flatMap(t=>t.players).concat(c.teams.freeAgents||[]).forEach(p=>{REAL_NAMES.add(p.name);if(p.nat)PLAYER_NATS[p.name]=p.nat})};
+const collectColors=c=>{c.teams.cdl.concat(c.teams.challengers).forEach(t=>{if(t.color)COLORS[t.id]=t.color;if(t.tag)TAGS[t.id]=t.tag});c.teams.cdl.flatMap(t=>t.players).concat(c.teams.freeAgents||[]).forEach(p=>{REAL_NAMES.add(p.name);if(p.nat)PLAYER_NATS[p.name]=p.nat})};
 const natCode=n=>{if(PLAYER_NATS[n])return PLAYER_NATS[n];if(REAL_NAMES.has(n))return null;let h=0;for(const c of n)h=(h*31+c.codePointAt(0))>>>0;return FICTIONAL_NATS[h%FICTIONAL_NATS.length]};
 const flagOf=code=>code?`<span class="flag" aria-hidden="true">${[...code].map(c=>String.fromCodePoint(0x1F1E6+c.charCodeAt(0)-65)).join("")}</span>`:"";
 const pFlag=p=>p.me?flagOf(NAT_CODES[S.me.nat]):flagOf(natCode(p.n));
 const tColor=id=>COLORS[id]||"#5b6b72";
 function tInk(id){const h=tColor(id).slice(1),n=[0,2,4].map(i=>parseInt(h.substr(i,2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*n[0]+.7152*n[1]+.0722*n[2]>.28?"#10181b":"#ffffff"}
-const tDot=id=>`<i class="dot" style="background:${tColor(id)}"></i>`;
-const tBand=(id,name,val)=>`<h3 class="tband" style="background:${tColor(id)};color:${tInk(id)}">${name}<span>${val}</span></h3>`;
+const tTag=id=>TAGS[id]||id;
+const tDot=id=>`<span class="badge" aria-hidden="true" style="background:${tColor(id)};color:${tInk(id)}">${tTag(id)}</span>`;
+const tBand=(id,name,val)=>`<h3 class="tband" style="background:${tColor(id)};color:${tInk(id)}"><span class="tname"><span class="badge big" aria-hidden="true" style="background:${tInk(id)};color:${tColor(id)}">${tTag(id)}</span><span>${name}</span></span><span>${val}</span></h3>`;
 let CDL0,FA0,CH0,SYL1,SYL2,ROLES,ORIG,NATS,STARTERS,PREP,TRAIN,OFF,CLUTCH,POOLS,RULES;
 function hydrate(c){
  collectColors(DEFAULT_CONTENT);collectColors(c);
@@ -241,7 +245,7 @@ function runEvent(lg,label,champs){
   const prize=(cut[myI]||0)*scale;S.me.money+=prize;
   res.run={rank,of:order.length,pts:champs?0:(pts[myI]||0),kd:kdVal,prize,qual:champs?null:qw+"-"+ql,series:mine.map(m=>({o:team(m.o).n,w:m.w,l:m.l,tag:m.tag}))};
   if(rank===1){const tr=(champs?"Champion ":"Vainqueur ")+label+" "+S.year;S.me.trophies.push({t:tr,big:champs&&lg==="CDL"});addLog(tr+" avec "+myTeam().n+" !")}
-  S.me.fame=clamp(S.me.fame+(rank===1?(lg==="CDL"?(champs?18:9):4):rank<=4?(lg==="CDL"?3:1):0)+(kdVal>1.1?2:0),0,100);
+  S.me.fame=clamp(S.me.fame+((rank===1?(lg==="CDL"?(champs?18:9):4):rank<=4?(lg==="CDL"?3:1):0)+(kdVal>1.1?2:0))*D().fameScale,0,100);
   S.me.morale=clamp(S.me.morale+(rank<=2?6:rank<=4?2:rank>=order.length-1?-6:-1),0,100);
  }
  S.seasonEvents.push(res);
@@ -253,16 +257,19 @@ function kd(p){return p.kn?p.ks/p.kn:0}
 function addLog(s){S.log.unshift({y:S.year,s});S.log=S.log.slice(0,40)}
 function pickScene(pool,key){S.used=S.used||{};const u=S.used[key]||[];let av=pool.filter(s=>!u.includes(s.id));if(!av.length){S.used[key]=[];av=pool}const s=pick(av);S.used[key]=(S.used[key]||[]).concat(s.id);return{pool:key,id:s.id}}
 const scene=d=>POOLS[d.pool].find(s=>s.id===d.id)||POOLS[d.pool][0];
-function growth(k){const m=S.me,a=m.age,g=a<=22?1.15:a<=26?1:a<=29?.65:.35;return m.attrs[k]>=m.pot?g*.25:g}
+function growth(k){const m=S.me,a=m.age,g=(a<=22?1.15:a<=26?1:a<=29?.65:.35)*D().growth;return m.attrs[k]>=m.pot?g*.25:g}
 function shown(k,v){return(k in S.me.attrs&&v>0)?Math.max(.1,Math.round(v*growth(k)*10)/10):v}
-function applyE(e){const m=S.me,out=[];for(const k in e){const v=shown(k,e[k]);
+function applyE(e){const m=S.me,out=[];for(const k in e){const v=shown(k,e[k]);out.push([k,v]);
   if(k in m.attrs)m.attrs[k]=clamp(m.attrs[k]+v,30,99);
   else if(k==="money")m.money+=v;
   else if(k==="form")m.form=clamp(m.form+v,-6,6);
   else m[k]=clamp(m[k]+v,0,100);
- }}
+ }
+ return out;
+}
+const fxHTML=fx=>'<div class="chips">'+fx.map(([k,v])=>{const txt=k==="money"?(v>0?"+":"")+usd(v):(v>0?"+":"−")+fr(Math.abs(v),Number.isInteger(v)?0:1);return`<span class="${v>0?"up":"down"}">${txt}${k==="money"?"":" "+STAT[k]}</span>`}).join("")+"</div>";
 function chipHTML(e){return'<div class="chips">'+Object.keys(e).map(k=>{const v=shown(k,e[k]);const txt=k==="money"?(v>0?"+":"")+usd(v):(v>0?"+":"−")+fr(Math.abs(v),Number.isInteger(v)?0:1);return`<span class="${v>0?"up":"down"}">${txt}${k==="money"?"":" "+STAT[k]}</span>`}).join("")+"</div>"}
-const chance=o=>clamp(.5+(S.me.attrs[o.s]-70)/40+(o.d||0),.08,.95);
+const chance=o=>{const d=D();return clamp(d.clutchBase+(S.me.attrs[o.s]-70)/d.clutchSpread+(o.d||0),.08,d.clutchMax)};
 
 function newSeason(first){
  S.step=0;S.bonus=0;S.clutchKd=0;S.seasonEvents=[];S.flash=first?S.flash:[];
@@ -290,16 +297,16 @@ function runAllChamps(){const res={};["CDL","CH"].forEach(lg=>{res[lg]=runEvent(
 function decide(i){
  const k=STEPS[S.step][0],sc=scene(S.dec),o=sc.o[i];S.flash=[];S.ev=null;S.news=null;S.decisionsDone++;
  if(k[0]==="m"&&k!=="merc"||k==="champs"){
-  const ok=Math.random()<chance(o);
-  if(ok){S.bonus=o.b*.9;S.clutchKd=o.b*.015;applyE({morale:4,fame:Math.round(o.b)});applyE({[o.s]:.6});S.flash.push({k:"ok",s:o.w});addLog("Grand moment : "+sc.t.toLowerCase()+".")}
-  else{S.bonus=-o.b*.45;S.clutchKd=-o.b*.008;applyE({morale:-4});S.flash.push({k:"bad",s:o.l})}
+  const pc=chance(o),ok=Math.random()<pc,d=D(),info=`${Math.round(pc*100)} % de réussite (${STAT[o.s]} ${Math.round(S.me.attrs[o.s])}), ${o.b>=3?"gros":o.b>=2?"moyen":"petit"} impact`;
+  if(ok){S.bonus=o.b*d.winBonus;S.clutchKd=o.b*.015;const fx=applyE({morale:4,fame:Math.round(o.b)}).concat(applyE({[o.s]:.6}));S.flash.push({k:"ok",s:o.w,info,fx});addLog("Grand moment : "+sc.t.toLowerCase()+".")}
+  else{S.bonus=-o.b*d.failPenalty;S.clutchKd=-o.b*.008;const fx=applyE({morale:-4});S.flash.push({k:"bad",s:o.l,info,fx})}
   let res;
   if(k==="champs"){const r=runAllChamps();res=r[myTeam().lg]}
   else{const idx=+k[1],lg=myTeam().lg;["CDL","CH"].forEach(g=>{const rr=runEvent(g,majorName(g,idx),false);if(g===lg)res=rr})}
   S.ev=res;S.bonus=0;S.clutchKd=0;S.me.form*=.6;
   if(res.run)addLog(`${res.label} : ${ord(res.run.rank)} avec ${myTeam().n}.`);
  }else{
-  applyE(o.e);S.flash.push({k:"note",s:"Choix fait : "+o.t+"."});
+  const fx=applyE(o.e);S.flash.push({k:"note",s:"Choix fait : "+o.t+".",fx});
  }
  nextStep();save();render();window.scrollTo&&window.scrollTo({top:0,behavior:"auto"});
 }
@@ -307,7 +314,7 @@ function value(){
  const m=S.me,t=myTeam(),k=kd(m)||1,mult=t.lg==="CDL"?25:12;
  const evs=S.seasonEvents.filter(e=>e.run&&!e.champs),avg=evs.length?evs.reduce((a,e)=>a+e.run.rank,0)/evs.length:6.5;
  const big=S.seasonEvents.some(e=>e.champs&&e.run&&e.run.rank===1);
- return ovr()+(k-1)*mult+(t.lg==="CDL"?(6.5-avg)*.5:(4.5-avg)*.5)+(big?3:0)+m.fame*.04+(m.chem-50)*.02;
+ return ovr()+(k-1)*mult+(t.lg==="CDL"?(6.5-avg)*.5:(4.5-avg)*.5)+(big?3:0)+m.fame*D().valueFame+(m.chem-50)*.02;
 }
 function salaryFor(t){if(t.lg==="CH")return Math.round((18000+ovr()*150)/1000)*1000;return Math.round(Math.max(45000,(55000+(ovr()-65)*9000)*(.7+t.pr/250)+S.me.fame*700)/1000)*1000}
 function endSeason(){
@@ -334,7 +341,7 @@ function endSeason(){
 }
 function buildOffers(v){
  const cur=S.teamId;
- const want=S.teams.filter(t=>t.lg==="CDL").map(t=>({t,need:teamStr(t,false)-6+(t.pr-75)*.1})).filter(x=>v>=x.need);
+ const want=S.teams.filter(t=>t.lg==="CDL").map(t=>({t,need:teamStr(t,false)-D().offerMargin+(t.pr-75)*.1})).filter(x=>v>=x.need);
  const res=[];
  const sorted=want.sort((a,b)=>b.need-a.need);
  sorted.slice(0,3).forEach(x=>res.push(x.t.id));
@@ -382,7 +389,7 @@ function rostermania(){
  const bot=ranks.slice(-5).filter(t=>t.id!==S.teamId);
  shuffle(bot).slice(0,2).forEach(t=>{if(t.p.length<2)return;const w=t.p.slice().sort((a,b)=>a.r-b.r)[0];t.p=t.p.filter(p=>p!==w);S.fa.push(w);news.push(`${t.n} libère ${w.n}.`)});
  const top=ranks.slice(0,6).filter(t=>t.id!==S.teamId);const rich=pick(top);const sell=pick(ranks.slice(4).filter(t=>t.id!==S.teamId&&t!==rich));
- if(rich&&sell&&sell.p.length){const star=sell.p.slice().sort((a,b)=>b.r-a.r)[0],w=rich.p.slice().sort((a,b)=>a.r-b.r)[0];if(star.r>w.r){sell.p=sell.p.filter(p=>p!==star);rich.p=rich.p.filter(p=>p!==w);rich.p.push(star);sell.p.push(w);news.push(`Échange : ${star.n} part chez ${rich.n}, ${w.n} chez ${sell.n}.`)}}
+ if(rich&&sell&&sell.p.length&&rich.p.length){const star=sell.p.slice().sort((a,b)=>b.r-a.r)[0],w=rich.p.slice().sort((a,b)=>a.r-b.r)[0];if(star.r>w.r){sell.p=sell.p.filter(p=>p!==star);rich.p=rich.p.filter(p=>p!==w);rich.p.push(star);sell.p.push(w);news.push(`Échange : ${star.n} part chez ${rich.n}, ${w.n} chez ${sell.n}.`)}}
  S.teams.filter(t=>t.lg==="CDL").forEach(t=>fillTeam(t,news));
  S.teams.filter(t=>t.lg==="CH").forEach(t=>fillTeam(t,news));
  S.fa=S.fa.sort((a,b)=>b.r-a.r).slice(0,14);
@@ -406,7 +413,7 @@ function sign(id){
  }else{S.clubYears=(S.clubYears||1)+1;addLog(`Tu prolonges chez ${t.n} pour ${usd(offer.sal)} par saison. ${S.clubYears}e saison au club.`)}
  S.salary=offer.sal;
  // Vieillissement du joueur
- m.age++;const a=m.age,nat=a<=22?1.1:a<=26?.45:a<=29?0:-(.7+(a-30)*.3);
+ m.age++;const a=m.age,nat=a<=22?D().youngGrowth:a<=26?D().midGrowth:a<=29?0:-(.7+(a-30)*.3);
  for(const k in m.attrs){const g=nat>0&&m.attrs[k]>=m.pot?nat*.2:nat;m.attrs[k]=clamp(m.attrs[k]+g+rnd(-.3,.3),30,99)}
  m.morale=clamp(m.morale*.5+32+(id===prev?RULES.retention.stayMorale:0),0,100);if(id===prev)m.chem=clamp(m.chem+RULES.retention.stayChem,0,100);m.form=0;m.fame=clamp(m.fame*.93,0,100);
  const moves=rostermania();const applied=applyPending();
@@ -423,7 +430,7 @@ function startCareer(f){
  S={v:1,year:2027,season:1,log:[],flash:[],champsHist:[]};
  const o=ORIG[f.orig];
  const base={aim:64,move:64,sense:64,mental:64};for(const k in o.a)base[k]+=o.a[k];
- S.me={name:f.name.trim().slice(0,18)||"Kaizo",nat:f.nat,role:f.role,orig:f.orig,age:18,attrs:base,pot:ri(84,97),morale:60,fame:6,money:0,form:0,chem:55,ks:0,kn:0,trophies:[],career:[],best:0};
+ S.me={name:f.name.trim().slice(0,18)||"Kaizo",nat:f.nat,role:f.role,orig:f.orig,age:18,attrs:base,pot:ri(D().potMin,D().potMax),morale:60,fame:6,money:0,form:0,chem:55,ks:0,kn:0,trophies:[],career:[],best:0};
  freshWorld();
  S.teamId=f.team;
  const t=team(f.team);const w=t.p.slice().sort((a,b)=>a.r-b.r)[0];t.p=t.p.filter(p=>p!==w);
@@ -464,7 +471,7 @@ function evCard(e){
   <div class="runs">${r.series.map(s=>`<div><span class="${s.w>s.l?"up":"down"}">${s.w>s.l?"V":"D"} ${s.w}-${s.l}</span> ${esc(s.o)} <span class="dim">· ${s.tag}</span></div>`).join("")}</div>
  </section>`;
 }
-function flashes(){return(S.flash||[]).map(f=>`<div class="flash ${f.k}">${esc(f.s).replace(/&#39;/g,"'")}</div>`).join("")}
+function flashes(){return(S.flash||[]).map(f=>`<div class="flash ${f.k}">${esc(f.s).replace(/&#39;/g,"'")}${f.info?`<div class="dim mono" style="font-size:12px;margin-top:2px">${esc(f.info)}</div>`:""}${f.fx&&f.fx.length?fxHTML(f.fx):""}</div>`).join("")}
 function newsBox(){if(!S.news||!S.news.length)return"";return`<section class="news"><div class="lab">Rostermania</div><ul>${S.news.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></section>`}
 function decisionView(){
  const sc=scene(S.dec),k=STEPS[S.step][0],clutch=(k[0]==="m"&&k!=="merc")||k==="champs",lg=myTeam().lg;
@@ -472,7 +479,7 @@ function decisionView(){
  return`<section class="scene">
   <div class="lab">Décision ${S.decisionsDone+1} · ${stage}${clutch?" · dans le feu du tournoi":""}</div>
   <h2>${sc.t}</h2><p>${sc.x}</p>
-  <div class="opts">${sc.o.map((o,i)=>`<button class="opt" id="opt-${i}" data-opt="${i}"><strong>${o.t}</strong>${clutch?`<div class="chips"><span class="neutral">${pct(chance(o))} de réussite</span><span class="dim">${STAT[o.s]} ${Math.round(S.me.attrs[o.s])}</span><span class="dim">${o.b>=3?"Gros impact":o.b>=2?"Impact moyen":"Petit impact"}</span></div>`:chipHTML(o.e)}</button>`).join("")}</div>
+  <div class="opts">${sc.o.map((o,i)=>`<button class="opt" id="opt-${i}" data-opt="${i}"><strong>${o.t}</strong></button>`).join("")}</div>
  </section>`;
 }
 function reviewView(){

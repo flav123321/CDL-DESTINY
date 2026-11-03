@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 4,
+ "revision": 5,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "Tous les joueurs réels ont maintenant leur drapeau.",
+ "notes": "Jeu plus difficile : réussites et gains révélés après ton choix.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -70,8 +70,8 @@
    "challengersScale": 0.08
   },
   "retention": {
-   "strongAt": 4,
-   "keepAt": -1,
+   "strongAt": 5,
+   "keepAt": 0,
    "strongRaise": 1.15,
    "stayChem": 10,
    "stayMorale": 5,
@@ -80,6 +80,21 @@
   "simulation": {
    "mapSpread": 9,
    "tournamentNoise": 2.5
+  },
+  "difficulty": {
+   "clutchBase": 0.42,
+   "clutchSpread": 45,
+   "clutchMax": 0.85,
+   "winBonus": 0.7,
+   "failPenalty": 0.7,
+   "growth": 0.8,
+   "youngGrowth": 0.8,
+   "midGrowth": 0.3,
+   "potMin": 80,
+   "potMax": 95,
+   "offerMargin": 4,
+   "valueFame": 0.02,
+   "fameScale": 0.6
   }
  },
  "roles": {
@@ -289,7 +304,8 @@
       "nat": "US"
      }
     ],
-    "color": "#93C83E"
+    "color": "#93C83E",
+    "tag": "OPT"
    },
    {
     "id": "FAZ",
@@ -317,7 +333,8 @@
       "nat": "BE"
      }
     ],
-    "color": "#E2231A"
+    "color": "#E2231A",
+    "tag": "FAZ"
    },
    {
     "id": "LAT",
@@ -345,7 +362,8 @@
       "nat": "US"
      }
     ],
-    "color": "#E8112D"
+    "color": "#E8112D",
+    "tag": "LAT"
    },
    {
     "id": "RYD",
@@ -373,7 +391,8 @@
       "nat": "SA"
      }
     ],
-    "color": "#00A651"
+    "color": "#00A651",
+    "tag": "RYD"
    },
    {
     "id": "PAR",
@@ -401,7 +420,8 @@
       "nat": "US"
      }
     ],
-    "color": "#E9E6E0"
+    "color": "#E9E6E0",
+    "tag": "PGM"
    },
    {
     "id": "TOR",
@@ -429,7 +449,8 @@
       "nat": "GB"
      }
     ],
-    "color": "#3F63E0"
+    "color": "#3F63E0",
+    "tag": "KOI"
    },
    {
     "id": "MIN",
@@ -457,7 +478,8 @@
       "nat": "US"
      }
     ],
-    "color": "#D71920"
+    "color": "#D71920",
+    "tag": "G2"
    },
    {
     "id": "MIA",
@@ -480,7 +502,8 @@
       "nat": "ES"
      }
     ],
-    "color": "#FFC400"
+    "color": "#FFC400",
+    "tag": "MIA"
    },
    {
     "id": "BOS",
@@ -508,7 +531,8 @@
       "nat": "US"
      }
     ],
-    "color": "#F26A21"
+    "color": "#F26A21",
+    "tag": "M80"
    },
    {
     "id": "C9N",
@@ -536,7 +560,8 @@
       "nat": "US"
      }
     ],
-    "color": "#00AEEF"
+    "color": "#00AEEF",
+    "tag": "C9"
    },
    {
     "id": "VAN",
@@ -564,7 +589,8 @@
       "nat": "US"
      }
     ],
-    "color": "#00B2A9"
+    "color": "#00B2A9",
+    "tag": "VAN"
    },
    {
     "id": "CAR",
@@ -587,7 +613,8 @@
       "nat": "US"
      }
     ],
-    "color": "#1C5DAB"
+    "color": "#1C5DAB",
+    "tag": "CAR"
    }
   ],
   "challengers": [
@@ -595,49 +622,57 @@
     "id": "NFA",
     "name": "Nightfall Academy",
     "prestige": 40,
-    "color": "#7A5CD6"
+    "color": "#7A5CD6",
+    "tag": "NFA"
    },
    {
     "id": "EMB",
     "name": "Ember GG",
     "prestige": 36,
-    "color": "#E0632A"
+    "color": "#E0632A",
+    "tag": "EMB"
    },
    {
     "id": "RFT",
     "name": "Rift Seven",
     "prestige": 38,
-    "color": "#2BB5A0"
+    "color": "#2BB5A0",
+    "tag": "R7"
    },
    {
     "id": "CLD",
     "name": "Cold Front",
     "prestige": 34,
-    "color": "#6FB7E9"
+    "color": "#6FB7E9",
+    "tag": "CF"
    },
    {
     "id": "NOI",
     "name": "Noir Esports",
     "prestige": 35,
-    "color": "#B9B4AE"
+    "color": "#B9B4AE",
+    "tag": "NOI"
    },
    {
     "id": "STA",
     "name": "Static",
     "prestige": 32,
-    "color": "#D9C531"
+    "color": "#D9C531",
+    "tag": "STA"
    },
    {
     "id": "VNT",
     "name": "Vanta Gaming",
     "prestige": 37,
-    "color": "#A34FC2"
+    "color": "#A34FC2",
+    "tag": "VNT"
    },
    {
     "id": "KIL",
     "name": "Kilo Squad",
     "prestige": 33,
-    "color": "#7FA04A"
+    "color": "#7FA04A",
+    "tag": "KIL"
    }
   ],
   "freeAgents": [

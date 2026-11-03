@@ -44,6 +44,7 @@
       if (!isObj(r.format)) e.push("rules.format est absent.");
       if (!isObj(r.retention)) e.push("rules.retention est absent.");
       if (!isObj(r.prizes)) e.push("rules.prizes est absent.");
+      if (r.difficulty !== undefined && !isObj(r.difficulty)) e.push("rules.difficulty est invalide.");
       if (!isObj(r.simulation) || !(r.simulation.mapSpread > 0)) e.push("rules.simulation.mapSpread doit être positif.");
     }
 
@@ -58,6 +59,7 @@
         if (teamIds.has(x.id)) e.push(`Équipe en double : ${x.id}.`);
         teamIds.add(x.id);
         if (!isNum(x.prestige)) e.push(`${x.id} : prestige manquant.`);
+        if (x.tag !== undefined && (!isStr(x.tag) || x.tag.length > 3)) e.push(`${x.id} : écusson invalide.`);
         if (x.color !== undefined && !/^#[0-9a-fA-F]{6}$/.test(x.color)) e.push(`${x.id} : couleur invalide.`);
       });
       t.cdl.forEach((x) => {
