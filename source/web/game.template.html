@@ -162,6 +162,9 @@ textarea{width:100%;min-height:110px;background:var(--panel);border:1px solid va
 .pill.on{color:var(--accent-ink);background:var(--accent)}
 .retire-card{background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:10px;border-left:3px solid var(--loss)}
 .retire-card h3{font-size:26px}
+.tagrow{display:flex;gap:8px;align-items:stretch}
+.tagrow input{min-width:0;flex:1}
+.tagrow .btn2{flex:none;white-space:nowrap}
 .fine{font-size:13px;color:var(--dim);max-width:75ch}
 section{min-width:0}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -698,12 +701,17 @@ function homeView(){
  <div><button class="ghost" data-tab="maj" id="home-maj">Mises à jour du jeu (révision ${CS.active.revision})</button></div>
  <p class="fine">Jeu de fan non officiel, sans lien avec Activision ni la Call of Duty League. Tes carrières restent sur ce téléphone.</p>`;
 }
+function randomTag(){
+ const n={...DEFAULT_CONTENT.names,...CS.active.names},w=n.gamertagWords,used=new Set([...REAL_NAMES,...Object.values(STORE.careers).map(c=>c.me.name)]);
+ for(let i=0;i<30;i++){const r=Math.random(),b=pick(w),t=r<.45?b:r<.7?pick(n.gamertagPrefixes)+b:r<.9?b+pick(n.gamertagSuffixes):b+pick(w);if(t.length<=18&&!used.has(t)&&t!==form.name)return t}
+ return pick(w);
+}
 function createView(){
  const f=form,starters=STARTERS;if(!starters.some(s=>s[0]===f.team))f.team=starters[0][0];if(!ROLES[f.role])f.role=Object.keys(ROLES)[0];if(!ORIG[f.orig])f.orig=Object.keys(ORIG)[0];
  return`<div><button class="ghost" data-act="home" id="create-back">‹ Accueil</button></div><div class="hero"><h1>CDL Destiny</h1><p>Tu débutes en Challengers à 18 ans. Chaque saison tient en dix décisions maximum, et ton choix d'équipe dépend de ce que tu as montré. Jusqu'où tu montes ?</p></div>
  <form id="create" class="stack" autocomplete="off">
   <div class="two">
-   <div class="field"><label class="lab" for="f-name">Ton pseudo</label><input type="text" id="f-name" maxlength="18" value="${esc(f.name)}"></div>
+   <div class="field"><label class="lab" for="f-name">Ton pseudo</label><div class="tagrow"><input type="text" id="f-name" maxlength="18" value="${esc(f.name)}"><button type="button" class="btn2" data-act="reroll" id="f-reroll">Autre idée</button></div></div>
    <div class="field"><label class="lab" for="f-nat">Nationalité</label><select id="f-nat">${NATS.map(n=>`<option ${n===f.nat?"selected":""}>${n}</option>`).join("")}</select></div>
   </div>
   <div class="field"><div class="lab">Ton rôle</div><div class="pickrow">${Object.entries(ROLES).map(([k,r])=>`<button type="button" class="pick" data-role="${k}" aria-pressed="${f.role===k}"><strong>${r.l}</strong>${r.d}</button>`).join("")}</div></div>
@@ -734,7 +742,8 @@ document.addEventListener("click",e=>{
   if(d.act==="cancel"){ui.confirm=null;render()}
  if(d.act==="retire"){ui.confirm=null;retire()}
  if(d.act==="home"){ui.confirm=null;closeCareer();tab="carriere";screen="home";keepPending();render();window.scrollTo&&window.scrollTo({top:0})}
- if(d.act==="new"){ui.confirm=null;closeCareer();tab="carriere";screen="create";keepPending();render();window.scrollTo&&window.scrollTo({top:0})}
+ if(d.act==="reroll"){keepForm();form.name=randomTag();render();const n=document.getElementById("f-name");return}
+ if(d.act==="new"){ui.confirm=null;closeCareer();tab="carriere";screen="create";keepPending();form.name=randomTag();render();window.scrollTo&&window.scrollTo({top:0})}
  if(d.open){const c=STORE.careers[d.open];if(c){ui.confirm=null;S=c;tab="carriere";STORE.currentId=c.id;render();window.scrollTo&&window.scrollTo({top:0})}return}
  if(d.askdel){ui.confirm="del:"+d.askdel;render();return}
  if(d.del){delete STORE.careers[d.del];ui.confirm=null;saveStore();render();return}
