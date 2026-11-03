@@ -167,6 +167,7 @@ textarea{width:100%;min-height:110px;background:var(--panel);border:1px solid va
 .tagrow .btn2{flex:none;white-space:nowrap}
 .notecard{background:var(--panel);padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;border-left:4px solid var(--accent)}
 .notecard.top{border-left-color:var(--win)}.notecard.low{border-left-color:var(--loss)}
+.perfline{font:800 22px/1.1 var(--display);margin-top:3px}
 .notebig{display:flex;align-items:baseline;gap:2px}
 .notebig b{font:900 58px/1 var(--display)}
 .notecard.top .notebig b{color:var(--win)}.notecard.mid .notebig b{color:var(--accent)}.notecard.low .notebig b{color:var(--loss)}
@@ -387,9 +388,14 @@ function endSeason(){
  if(lg==="CDL")m.didCDL=true;
  const champs=S.seasonEvents.filter(e=>e.champs&&e.lg==="CDL")[0];
  if(champs)S.champsHist.unshift({y:S.year,t:team(champs.win).n});
+ const sn=seasonNote()||{note:5,parts:[]},dd=D(),myEv=S.seasonEvents.filter(e=>e.run&&e.lg==="CDL"&&e.run.rank===1);
+ const perf=clamp((sn.note-dd.perfNeutral)*dd.perfPerPoint+myEv.filter(e=>e.champs).length*dd.perfChamps+myEv.filter(e=>!e.champs).length*dd.perfMajor,dd.perfMin,dd.perfMax);
+ const ovrBefore=ovr();for(const a in m.attrs)m.attrs[a]=clamp(m.attrs[a]+perf,30,99);
+ if(perf>0)m.pot=Math.min(99,m.pot+perf*.5);
+ const perfGain=ovr()-ovrBefore;
+ if(Math.abs(perfGain)>=.05)addLog(`Ta saison ${perfGain>0?"te fait gagner":"te fait perdre"} ${fr(Math.abs(perfGain),1)} au général.`);
  const v=value();
- const sn=seasonNote()||{note:5,parts:[]};
- S.review={place,of:table.length,lg,kd:k,v,ovr0:S.ovrStart,ovr1:ovr(),earn:m.money-S.moneyStart,awards,teamN:t.n,pts:t.pts,note:sn.note,parts:sn.parts};
+ S.review={place,of:table.length,lg,kd:k,v,ovr0:S.ovrStart,ovr1:ovr(),earn:m.money-S.moneyStart,awards,teamN:t.n,pts:t.pts,note:sn.note,parts:sn.parts,perf:perfGain};
  m.best=Math.max(m.best||0,ovr());
  const rec=seasonRecord(S.seasonEvents),rnk=myRank();m.bestRank=Math.min(m.bestRank||rnk,rnk);
  m.career.push({y:S.year,t:t.n,lg,place,kd:k,ovr:ovr(),rank:rnk,note:sn.note,...rec});
@@ -572,7 +578,7 @@ function reviewView(){
   <h2>${esc(r.teamN)} finit ${ord(r.place)}</h2>
   <p>${judge}${r.awards.length?` <strong style="color:var(--accent)">${r.awards.join(", ")} !</strong>`:""}</p>
  </section>
- <section class="notecard ${noteCls(r.note)}"><div class="notebig"><b>${fr(r.note,1)}</b><span>/10</span></div><div class="notebody"><div class="lab">Note de saison</div><ul>${(r.parts||[]).map(x=>{const v=Math.round(x.v*10)/10;return`<li><span>${esc(x.l)}</span><b class="${v>=0?"up":"down"}">${v>=0?"+":"−"}${fr(Math.abs(v),1)}</b></li>`}).join("")}</ul></div></section>
+ <section class="notecard ${noteCls(r.note)}"><div class="notebig"><b>${fr(r.note,1)}</b><span>/10</span></div><div class="notebody"><div class="lab">Note de saison</div>${r.perf!==undefined&&Math.abs(r.perf)>=.05?`<div class="perfline ${r.perf>0?"up":"down"}">${r.perf>0?"+":"−"}${fr(Math.abs(r.perf),1)} au général grâce à ta saison</div>`.replace("grâce à ta saison",r.perf>0?"grâce à ta saison":"à cause de ta saison"):""}<ul>${(r.parts||[]).map(x=>{const v=Math.round(x.v*10)/10;return`<li><span>${esc(x.l)}</span><b class="${v>=0?"up":"down"}">${v>=0?"+":"−"}${fr(Math.abs(v),1)}</b></li>`}).join("")}</ul></div></section>
  <div class="tiles">
   <div><b>${fr(r.kd,2)}</b><span class="lab">K/D</span></div>
   <div><b>${r.pts}</b><span class="lab">Points équipe</span></div>

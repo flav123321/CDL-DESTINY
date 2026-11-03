@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 8,
+ "revision": 9,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "Une note de saison décide maintenant si ton club te garde.",
+ "notes": "Ta note de saison fait maintenant évoluer ton général.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -94,7 +94,13 @@
    "potMax": 95,
    "offerMargin": 4,
    "valueFame": 0.02,
-   "fameScale": 0.6
+   "fameScale": 0.6,
+   "perfNeutral": 5.5,
+   "perfPerPoint": 0.5,
+   "perfChamps": 1,
+   "perfMajor": 0.25,
+   "perfMax": 4,
+   "perfMin": -1.5
   }
  },
  "roles": {
