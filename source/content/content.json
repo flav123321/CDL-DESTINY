@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "revision": 5,
+ "revision": 6,
  "minEngine": 1,
  "updatedAt": "2026-11-03",
- "notes": "Jeu plus difficile : réussites et gains révélés après ton choix.",
+ "notes": "Paris Gentle Mates passe en rose.",
  "rules": {
   "format": {
    "seriesFirstTo": 3,
@@ -420,7 +420,7 @@
       "nat": "US"
      }
     ],
-    "color": "#E9E6E0",
+    "color": "#F25CA8",
     "tag": "PGM"
    },
    {
