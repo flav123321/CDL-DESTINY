@@ -367,11 +367,13 @@ function endSeason(){
 }
 function buildOffers(v){
  const cur=S.teamId;
- const want=S.teams.filter(t=>t.lg==="CDL").map(t=>({t,need:teamStr(t,false)-D().offerMargin+(t.pr-75)*.1})).filter(x=>v>=x.need);
- const res=[];
- const sorted=want.sort((a,b)=>b.need-a.need);
- sorted.slice(0,3).forEach(x=>res.push(x.t.id));
- const rest=sorted.slice(3);if(rest.length)res.push(pick(rest).t.id);
+ // Chaque saison, les clubs qui te suivent ne sont pas les mêmes : tous ceux que ton niveau intéresse peuvent appeler.
+ const res=S.teams.filter(t=>t.lg==="CDL"&&t.id!==cur).map(t=>{
+  const gap=v-(teamStr(t,false)-D().offerMargin+(t.pr-75)*.1);
+  if(gap<0&&(gap<-3||Math.random()>.2))return null; // de temps en temps, un club un peu au-dessus de ton niveau tente le coup
+  const weakest=Math.min(...t.p.map(p=>p.r));
+  return{id:t.id,str:teamStr(t,false),score:Math.random()+clamp((ovr()-weakest)*.03,-.3,.3)};
+ }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,4).sort((a,b)=>b.str-a.str).map(x=>x.id);
  const ct=myTeam();
  const isCDL=ct.lg==="CDL",k0=kd(S.me)||1,evs=S.seasonEvents.filter(e=>e.run&&!e.champs),mid=isCDL?6.5:4.5;
  const avgR=evs.length?evs.reduce((a,e)=>a+e.run.rank,0)/evs.length:mid;
