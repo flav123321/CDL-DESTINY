@@ -156,7 +156,7 @@ input[type=text],select{background:var(--panel);border:1px solid var(--line);col
 textarea{width:100%;min-height:110px;background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:10px;font:400 13px/1.4 var(--mono)}
 .conf{background:var(--panel);padding:12px 15px;display:flex;flex-direction:column;gap:6px;font-size:14px;overflow-wrap:anywhere}
 .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
-.btn2{background:var(--panel2);padding:9px 13px;font-weight:600;font-size:15px}
+.btn2{background:var(--panel2);padding:10px 14px;font-weight:600;font-size:15px}
 .btn2:hover{background:var(--line)}
 .reveal{background:var(--panel);padding:16px 18px;border-top:4px solid var(--accent);display:flex;flex-direction:column;gap:6px}
 .reveal.good{border-top-color:var(--win)}.reveal.bad{border-top-color:var(--loss)}
@@ -173,6 +173,15 @@ textarea{width:100%;min-height:110px;background:var(--panel);border:1px solid va
 .fxval{font-size:12px;color:var(--dim);margin-top:3px}
 @keyframes fxin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes fxgrow{from{width:var(--from)}to{width:var(--to)}}
+.hcard{background:var(--panel);padding:13px 15px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.hcard h3.tband{margin:-13px -15px 4px;padding:9px 15px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:25px}
+.hcard h3.tband span{color:inherit}
+.hcard.lead{outline:2px solid var(--accent)}
+.hname{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:20px}
+.pill{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:4px 7px;background:var(--panel2);color:var(--dim);margin-left:auto}
+.pill.on{color:var(--accent-ink);background:var(--accent)}
+.retire-card{background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:10px;border-left:3px solid var(--loss)}
+.retire-card h3{font-size:26px}
 .fine{font-size:13px;color:var(--dim);max-width:75ch}
 section{min-width:0}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -422,7 +431,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const fr=(x,d=0)=>Number(x).toFixed(d).replace(".",",");
 const usd=x=>(x<0?"−":"")+Math.abs(Math.round(x)).toLocaleString("fr-FR").replace(/[  ]/g," ")+" $";
 const ord=n=>n===1?"1er":n+"e";
-let S=null, tab="carriere", ui={confirm:null};
+let S=null, tab="carriere", screen="home", ui={confirm:null};
 
 /* ---------- Monde ---------- */
 const mkP=(n,r,f)=>({n,r,y:f?ri(0,2):ri(2,8),f:!!f,ks:0,kn:0});
@@ -664,10 +673,14 @@ function sign(id){
  S.ev=null;S.review=null;S.offers=null;
  newSeason(true);save();render();window.scrollTo&&window.scrollTo({top:0});
 }
-function retire(){S.ended=true;addLog("Tu annonces la fin de ta carrière.");save();render()}
+function retire(){
+ const m=S.me;
+ if(!S.review&&S.seasonEvents&&S.seasonEvents.some(e=>e.run)){const t=myTeam(),table=league(t.lg).slice().sort((a,b)=>b.pts-a.pts),rnk=myRank();m.career.push({y:S.year,t:t.n,lg:t.lg,place:table.indexOf(t)+1,kd:kd(m)||1,ovr:ovr(),rank:rnk,partial:true,...seasonRecord(S.seasonEvents)});m.bestRank=Math.min(m.bestRank||rnk,rnk)}
+ m.best=Math.max(m.best||0,ovr());S.reveal=null;S.ended=true;S.endedYear=S.year;addLog("Tu annonces la fin de ta carrière.");save();window.scrollTo&&window.scrollTo({top:0});render();
+}
 function startCareer(f){
  applyPending();
- S={v:1,year:2027,season:1,log:[],flash:[],champsHist:[]};
+ S={v:1,id:"c"+Date.now().toString(36),createdAt:Date.now(),year:2027,season:1,log:[],flash:[],champsHist:[]};
  const o=ORIG[f.orig];
  const base={aim:64,move:64,sense:64,mental:64};for(const k in o.a)base[k]+=o.a[k];
  S.me={name:f.name.trim().slice(0,18)||"Kaizo",nat:f.nat,role:f.role,orig:f.orig,age:18,attrs:base,pot:ri(D().potMin,D().potMax),morale:60,fame:6,money:0,form:0,chem:55,ks:0,kn:0,trophies:[],career:[],best:0};
@@ -677,7 +690,7 @@ function startCareer(f){
  S.salary=salaryFor(t);
  addLog(`${S.me.name}, 18 ans, ${f.nat}. Premier contrat avec ${t.n}.`);
  S.flash=[{k:"note",s:o.story+" Aujourd'hui, tu signes ton premier contrat, chez "+t.n+". Direction la CDL."}];
- newSeason(true);save();tab="carriere";render();
+ newSeason(true);save();tab="carriere";screen="home";render();window.scrollTo&&window.scrollTo({top:0});
 }
 
 /* ---------- Sauvegarde et synchronisation du contenu ---------- */
@@ -688,9 +701,19 @@ function parseJ(x){if(!x)return null;try{return JSON.parse(x)}catch(e){return nu
 function readKV(k,native){let a=null;try{a=parseJ(localStorage.getItem(k))}catch(e){}const b=parseJ(native);if(a&&b)return(b.ts||0)>(a.ts||0)?b:a;return a||b}
 function writeKV(k,o){o.ts=Date.now();const v=JSON.stringify(o);try{localStorage.setItem(k,v)}catch(e){}
  if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:"kv",key:k,value:v}))}
-function save(){if(S)writeKV("cdl-save",S)}
+/* Toutes les carrières vivent dans un seul document : {careers:{id:carrière},currentId}. */
+let STORE={careers:{},currentId:null};
+function saveStore(){writeKV("cdl-save",STORE)}
+function save(){if(!S)return;S.updated=Date.now();try{S.rk=myRank()}catch(e){}STORE.careers[S.id]=S;STORE.currentId=S.id;saveStore()}
+function closeCareer(){if(S)save();S=null}
+function keepPending(){const n=applyPending();if(n)updMsg=`Révision ${CS.active.revision} appliquée. ${n}`}
+function loadStore(raw){
+ if(raw&&raw.careers)return{careers:raw.careers,currentId:raw.currentId||null};
+ const st={careers:{},currentId:null};
+ if(raw&&raw.me){if(!raw.id)raw.id="c"+(raw.ts||Date.now()).toString(36);raw.updated=raw.updated||raw.ts||Date.now();st.careers[raw.id]=raw;st.currentId=raw.id}
+ return st;
+}
 function saveCS(){writeKV("cdl-content",CS)}
-function clearSave(){try{localStorage.removeItem("cdl-save")}catch(e){}if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:"kv",key:"cdl-save",value:null}))}
 const atSeasonStart=()=>S&&!S.ended&&S.step===0&&S.decisionsDone===0;
 function freshCS(){return{base:DEFAULT_CONTENT,active:DEFAULT_CONTENT,local:null,pending:null,conflicts:[],url:null,lastCheck:null}}
 function computePending(remote){
@@ -704,10 +727,10 @@ function receive(remote){
  const v=validateContent(remote);
  if(!v.ok)return{ok:false,msg:"Fichier refusé, ton jeu n'a pas changé : "+v.errors[0]};
  const known=CS.pending?CS.pending.remote.revision:CS.base.revision;
- if(remote.revision<=known)return{ok:true,msg:CS.pending?`La révision ${known} est déjà reçue. Elle s'appliquera à la prochaine saison.`:`Tu es à jour (révision ${known}).`};
+ if(remote.revision<=known)return{ok:true,msg:CS.pending?`La révision ${known} est déjà reçue. Elle s'appliquera à ta prochaine saison, ou en revenant à l'accueil.`:`Tu es à jour (révision ${known}).`};
  CS.pending=computePending(remote);saveCS();
  if(!S||atSeasonStart()){const n=applyPending();return{ok:true,msg:`Révision ${CS.active.revision} appliquée. ${n}`,applied:true}}
- return{ok:true,msg:`Révision ${remote.revision} reçue. Elle s'appliquera au début de ta prochaine saison, pour ne pas changer les règles en cours de route.`};
+ return{ok:true,msg:`Révision ${remote.revision} reçue. Elle s'appliquera à ta prochaine saison, ou en revenant à l'accueil.`};
 }
 function applyPending(){
  const p=CS.pending;if(!p)return null;
@@ -763,14 +786,14 @@ function updView(){
  const a=CS.active,when=CS.lastCheck?new Date(CS.lastCheck).toLocaleString("fr-FR"):"jamais";
  return`<div class="stack" style="max-width:720px">
  <div><h2 style="font-size:38px">Mises à jour du jeu</h2><p class="dim">Version installée : révision ${a.revision}, du ${esc(a.updatedAt||"")}. ${a.notes?esc(a.notes):""}</p>
- <p class="dim" style="font-size:14px">Dernière vérification : ${when}. Version de l'application : 2026-11-03 17:02.</p></div>
+ <p class="dim" style="font-size:14px">Dernière vérification : ${when}. Version de l'application : 2026-11-03 17:08.</p></div>
  ${updMsg?`<div class="flash note" id="upd-msg">${esc(updMsg)}</div>`:""}
- ${CS.pending?`<div class="flash ok">Révision ${CS.pending.remote.revision} prête. ${S&&!atSeasonStart()?"Elle s'appliquera au début de ta prochaine saison.":""}</div>`:""}
+ ${CS.pending?`<div class="flash ok">Révision ${CS.pending.remote.revision} prête. ${S&&!atSeasonStart()?"Elle s'appliquera à ta prochaine saison, ou en revenant à l'accueil.":""}</div>`:""}
  ${(CS.conflicts||[]).length?`<section class="stack" style="gap:8px"><div class="lab">À trancher : modifié des deux côtés</div>${CS.conflicts.map((c,i)=>`<div class="conf"><span class="mono">${esc(pathLabel(c.path))}</span><div><span class="dim">Ta version :</span> ${esc(shortJ(c.ours))}</div><div><span class="dim">En ligne :</span> ${esc(shortJ(c.theirs))}</div><div class="row"><button class="btn2" data-conf="${i}" data-keep="mine" id="conf-mine-${i}">Garder la mienne</button><button class="btn2" data-conf="${i}" data-keep="online" id="conf-on-${i}">Garder celle en ligne</button></div></div>`).join("")}</section>`:""}
  <section class="field"><label class="lab" for="upd-url">Adresse du fichier content.json</label><input type="text" id="upd-url" value="${esc(contentUrl()||"")}" placeholder="https://tonpseudo.github.io/cdl-destiny/content.json"><div class="row"><button class="btn2" data-upd="check" id="upd-check">Vérifier maintenant</button></div></section>
  <section class="field"><label class="lab" for="upd-text">Importer du JSON à la main</label><textarea id="upd-text" placeholder='Colle ici le fichier complet, ou juste une modification, par exemple {"rules":{"qualifiers":{"CDL":6}}}'></textarea><div class="row"><button class="btn2" data-upd="import" id="upd-import">Importer</button><label class="ghost" for="upd-file" style="cursor:pointer">Choisir un fichier</label><input type="file" id="upd-file" accept=".json,application/json" hidden>${CS.local?'<button class="ghost" data-upd="reset" id="upd-reset">Supprimer mes modifications locales</button>':""}</div></section>
  <p class="fine">Les textes, scénarios et règles s'appliquent à la saison suivante. Les changements d'effectifs de départ s'appliquent aux nouvelles carrières : ta carrière en cours garde son propre monde.</p>
- ${S?"":'<div><button class="ghost" data-tab="carriere" id="upd-back">Retour à la création</button></div>'}
+ ${S?"":'<div><button class="ghost" data-tab="carriere" id="upd-back">Retour à l\'accueil</button></div>'}
  </div>`;
 }
 document.addEventListener("change",e=>{if(e.target.id!=="upd-file"||!e.target.files[0])return;const r=new FileReader();r.onload=()=>{document.getElementById("upd-text").value=r.result};r.readAsText(e.target.files[0])});
@@ -779,9 +802,9 @@ function boot(){
  CS=saved&&saved.active&&validateContent(saved.active).ok&&validateContent(saved.base).ok?saved:freshCS();
  if(saved&&CS!==saved)updMsg="La version enregistrée était illisible : retour à la version intégrée.";
  hydrate(CS.active);
- S=readKV("cdl-save",BR&&BR.save);
+ STORE=loadStore(readKV("cdl-save",BR&&BR.save));S=null;screen="home";
  if(DEFAULT_CONTENT.revision>CS.base.revision)receive(DEFAULT_CONTENT);
- if(!S||atSeasonStart())applyPending();
+ applyPending();
  render();
  checkUpdates(false);
  addEventListener("online",()=>checkUpdates(false));
@@ -794,7 +817,7 @@ let form={name:"Kaizo",nat:"France",role:"AR",orig:"ranked",team:"STA"};
 const pct=x=>Math.round(x*100)+" %";
 function hud(){
  const m=S.me,t=myTeam();
- return`<header class="hud">
+ return`<div><button class="ghost" data-act="home" id="go-home">‹ Accueil</button></div><header class="hud">
   <div class="ovr mono" style="font-family:var(--display)" title="Note générale">${Math.round(ovr())}</div>
   <div class="who"><h1>${pFlag({me:true})}${esc(m.name)} <span class="wrank" title="Classement mondial">#${myRank()}</span></h1><div class="dim" style="font-size:14px">${tDot(t.id)}${t.n} · ${lgName(t.lg)} · ${ROLES[m.role].l} · ${m.age} ans · ${esc(m.nat)}</div></div>
   <div class="nums">
@@ -867,7 +890,10 @@ function reviewView(){
  <section class="stack" style="gap:8px"><div class="lab">Ton équipe pour ${S.year+1}</div>
  ${keepBlock(r)}
  ${others.length?`<div class="lab" style="margin-top:6px">${stay?"Ou pars ailleurs":"Tes offres"}</div><div class="grid">${others.map(offerCard).join("")}</div>`:`<p class="dim">Aucune autre équipe ne t'appelle cette année.</p>`}</section>
- <div>${ui.confirm==="retire"?`<span>Arrêter pour de bon ? </span><button class="ghost" data-act="retire">Oui, je prends ma retraite</button> · <button class="ghost" data-act="cancel">Non</button>`:`<button class="ghost" data-act="ask-retire">Prendre ma retraite</button>`}</div>`;
+ <section class="retire-card"><div><h3>Ou tu arrêtes là ?</h3><p class="dim">Tu as ${S.me.age} ans et ${S.me.career.length} saison${S.me.career.length>1?"s":""} derrière toi. Ta carrière restera dans ton accueil.</p></div>${retireControl("Prendre ma retraite")}</section>`;
+}
+function retireControl(label){
+ return ui.confirm==="retire"?`<div class="row"><span>Tu arrêtes pour de bon ?</span><button class="btn2" data-act="retire" id="retire-yes">Oui, je prends ma retraite</button><button class="btn2" data-act="cancel" id="retire-no">Non</button></div>`:`<button class="btn2" data-act="ask-retire" id="retire-ask">${label}</button>`;
 }
 function sidePanel(){
  const m=S.me,a=m.attrs,t=myTeam();
@@ -947,7 +973,7 @@ function footerCareer(){
  <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
  <div class="scroll"><div class="lab">Parcours</div>${m.career.length?`<table style="margin-top:4px"><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Note</th></tr></thead><tbody>${m.career.slice().reverse().slice(0,10).map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table>`:'<div class="dim" style="font-size:15px;margin-top:4px">Ta première saison s\'écrit maintenant.</div>'}</div>
  </div>
- <div>${ui.confirm==="reset"?`<span>Effacer cette carrière ? </span><button class="ghost" data-act="reset">Oui, recommencer</button> · <button class="ghost" data-act="cancel">Non</button>`:`<button class="ghost" data-act="ask-reset">Nouvelle carrière</button>`}</div>
+ ${S.step<9?`<div>${retireControl("Prendre ma retraite")}</div>`:""}
  </section>`;
 }
 function equipesView(){
@@ -988,11 +1014,31 @@ function endView(){
  return`<div class="stack"><div class="hero"><div class="lab">Fin de carrière · ${m.age} ans</div><h1 style="font-size:clamp(46px,10vw,96px)">${esc(m.name)}</h1><p><strong style="color:var(--accent)">${lab}</strong>. ${m.career.length} saison${m.career.length>1?"s":""}, ${usd(m.money)} gagnés (fictifs).</p></div>
  <div class="tiles"><div><b>${wins}</b><span class="lab">Titres Champs</span></div><div><b>${maj}</b><span class="lab">Majors</span></div><div><b>${mvp}</b><span class="lab">MVP</span></div><div><b>${Math.round(m.best)}</b><span class="lab">Meilleure note</span></div></div>
  <div class="scroll"><table><thead><tr><th>An</th><th>Équipe</th><th>Place</th><th>K/D</th><th>Note</th></tr></thead><tbody>${m.career.map(c=>`<tr><td>${c.y}</td><td>${esc(c.t)}</td><td>${ord(c.place)} ${lgName(c.lg)}</td><td>${fr(c.kd,2)}</td><td>${Math.round(c.ovr)}</td></tr>`).join("")}</tbody></table></div>
- <div><button class="btn" data-act="reset" id="restart">Nouvelle carrière</button></div></div>`;
+ <div class="row"><button class="btn" data-act="new" id="restart">Nouvelle carrière</button><button class="btn2" data-act="home" id="end-home">Retour à l'accueil</button></div></div>`;
+}
+function careerInfo(c){
+ const m=c.me,t=c.teams.find(x=>x.id===c.teamId)||{n:"",id:c.teamId},tr=m.trophies.map(x=>x.t);
+ return{id:c.id,name:m.name,nat:m.nat,team:t,year:c.endedYear||c.year,age:m.age,ovr:ovr(m),rank:c.rk,ended:!!c.ended,seasons:m.career.length,champs:tr.filter(x=>/^Champion Champs/.test(x)).length,majors:tr.filter(x=>/^Vainqueur Major/.test(x)).length,when:c.updated||c.ts||0};
+}
+function homeView(){
+ const list=Object.values(STORE.careers).map(careerInfo).sort((a,b)=>(a.ended-b.ended)||(b.when-a.when)),cur=list.find(c=>!c.ended);
+ const row=c=>`<section class="hcard ${cur&&c.id===cur.id?"lead":""}">
+  ${tBand(c.team.id,esc(c.team.n||"Sans équipe"),Math.round(c.ovr))}
+  <div class="hname"><strong>${flagOf(NAT_CODES[c.nat])}${esc(c.name)}</strong>${c.rank?` <span class="wrank">#${c.rank}</span>`:""}<span class="pill ${c.ended?"":"on"}">${c.ended?"Retraité":"En cours"}</span></div>
+  <div class="dim" style="font-size:14px">${c.ended?"Fin en "+c.year:"Saison "+c.year} · ${c.age} ans · ${c.seasons} saison${c.seasons>1?"s":""} jouée${c.seasons>1?"s":""}</div>
+  <div class="dim mono" style="font-size:13px">${c.champs} Champs · ${c.majors} Majors</div>
+  <div class="row"><button class="${cur&&c.id===cur.id?"btn":"btn2"}" data-open="${c.id}" id="open-${c.id}">${c.ended?"Voir le bilan":"Continuer"}</button>
+  ${ui.confirm==="del:"+c.id?`<span>Supprimer pour de bon ?</span><button class="btn2" data-del="${c.id}" id="del-yes-${c.id}">Oui</button><button class="btn2" data-act="cancel">Non</button>`:`<button class="ghost" data-askdel="${c.id}" id="del-${c.id}">Supprimer</button>`}</div>
+ </section>`;
+ return`<div class="hero"><h1>CDL Destiny</h1><p>${cur?"Ta carrière t'attend.":"Écris ta première carrière, du Challengers au titre mondial."}</p></div>
+ <div class="row"><button class="${cur?"btn2":"btn"}" data-act="new" id="home-new">Nouvelle carrière</button></div>
+ <section class="stack"><div class="lab">Mes carrières</div>${list.length?`<div class="grid">${list.map(row).join("")}</div>`:'<p class="dim">Aucune carrière pour l\'instant. Lance la première !</p>'}</section>
+ <div><button class="ghost" data-tab="maj" id="home-maj">Mises à jour du jeu (révision ${CS.active.revision})</button></div>
+ <p class="fine">Jeu de fan non officiel, sans lien avec Activision ni la Call of Duty League. Tes carrières restent sur ce téléphone.</p>`;
 }
 function createView(){
  const f=form,starters=STARTERS;if(!starters.some(s=>s[0]===f.team))f.team=starters[0][0];if(!ROLES[f.role])f.role=Object.keys(ROLES)[0];if(!ORIG[f.orig])f.orig=Object.keys(ORIG)[0];
- return`<div class="hero"><h1>CDL Destiny</h1><p>Tu débutes en Challengers à 18 ans. Chaque saison tient en dix décisions maximum, et ton choix d'équipe dépend de ce que tu as montré. Jusqu'où tu montes ?</p></div>
+ return`<div><button class="ghost" data-act="home" id="create-back">‹ Accueil</button></div><div class="hero"><h1>CDL Destiny</h1><p>Tu débutes en Challengers à 18 ans. Chaque saison tient en dix décisions maximum, et ton choix d'équipe dépend de ce que tu as montré. Jusqu'où tu montes ?</p></div>
  <form id="create" class="stack" autocomplete="off">
   <div class="two">
    <div class="field"><label class="lab" for="f-name">Ton pseudo</label><input type="text" id="f-name" maxlength="18" value="${esc(f.name)}"></div>
@@ -1008,7 +1054,7 @@ function createView(){
 }
 function render(){
  const app=document.getElementById("app");
- if(!S){app.innerHTML=tab==="maj"?updView():createView();return}
+ if(!S){app.innerHTML=tab==="maj"?updView():screen==="create"?createView():homeView();return}
  if(S.ended){app.innerHTML=endView();return}
  const body=tab==="palmares"?palmaresView():tab==="maj"?updView():tab==="equipes"?equipesView():tab==="matchs"?matchsView():tab==="classement"?classementView():carriereView();
  app.innerHTML=hud()+body;
@@ -1023,10 +1069,13 @@ document.addEventListener("click",e=>{
  if(handleUpd(d,b))return;
  if(d.act==="reveal-ok"){S.reveal=null;S.ev=null;save();render();window.scrollTo&&window.scrollTo({top:0});return}
  if(d.act==="ask-retire"){ui.confirm="retire";render()}
- if(d.act==="ask-reset"){ui.confirm="reset";render()}
- if(d.act==="cancel"){ui.confirm=null;render()}
+  if(d.act==="cancel"){ui.confirm=null;render()}
  if(d.act==="retire"){ui.confirm=null;retire()}
- if(d.act==="reset"){ui.confirm=null;S=null;clearSave();tab="carriere";render();window.scrollTo&&window.scrollTo({top:0})}
+ if(d.act==="home"){ui.confirm=null;closeCareer();tab="carriere";screen="home";keepPending();render();window.scrollTo&&window.scrollTo({top:0})}
+ if(d.act==="new"){ui.confirm=null;closeCareer();tab="carriere";screen="create";keepPending();render();window.scrollTo&&window.scrollTo({top:0})}
+ if(d.open){const c=STORE.careers[d.open];if(c){ui.confirm=null;S=c;tab="carriere";STORE.currentId=c.id;render();window.scrollTo&&window.scrollTo({top:0})}return}
+ if(d.askdel){ui.confirm="del:"+d.askdel;render();return}
+ if(d.del){delete STORE.careers[d.del];ui.confirm=null;saveStore();render();return}
 });
 document.addEventListener("submit",e=>{if(e.target.id!=="create")return;e.preventDefault();form.name=document.getElementById("f-name").value;form.nat=document.getElementById("f-nat").value;startCareer(form)});
 

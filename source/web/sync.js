@@ -6,9 +6,19 @@ function parseJ(x){if(!x)return null;try{return JSON.parse(x)}catch(e){return nu
 function readKV(k,native){let a=null;try{a=parseJ(localStorage.getItem(k))}catch(e){}const b=parseJ(native);if(a&&b)return(b.ts||0)>(a.ts||0)?b:a;return a||b}
 function writeKV(k,o){o.ts=Date.now();const v=JSON.stringify(o);try{localStorage.setItem(k,v)}catch(e){}
  if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:"kv",key:k,value:v}))}
-function save(){if(S)writeKV("cdl-save",S)}
+/* Toutes les carrières vivent dans un seul document : {careers:{id:carrière},currentId}. */
+let STORE={careers:{},currentId:null};
+function saveStore(){writeKV("cdl-save",STORE)}
+function save(){if(!S)return;S.updated=Date.now();try{S.rk=myRank()}catch(e){}STORE.careers[S.id]=S;STORE.currentId=S.id;saveStore()}
+function closeCareer(){if(S)save();S=null}
+function keepPending(){const n=applyPending();if(n)updMsg=`Révision ${CS.active.revision} appliquée. ${n}`}
+function loadStore(raw){
+ if(raw&&raw.careers)return{careers:raw.careers,currentId:raw.currentId||null};
+ const st={careers:{},currentId:null};
+ if(raw&&raw.me){if(!raw.id)raw.id="c"+(raw.ts||Date.now()).toString(36);raw.updated=raw.updated||raw.ts||Date.now();st.careers[raw.id]=raw;st.currentId=raw.id}
+ return st;
+}
 function saveCS(){writeKV("cdl-content",CS)}
-function clearSave(){try{localStorage.removeItem("cdl-save")}catch(e){}if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:"kv",key:"cdl-save",value:null}))}
 const atSeasonStart=()=>S&&!S.ended&&S.step===0&&S.decisionsDone===0;
 function freshCS(){return{base:DEFAULT_CONTENT,active:DEFAULT_CONTENT,local:null,pending:null,conflicts:[],url:null,lastCheck:null}}
 function computePending(remote){
@@ -22,10 +32,10 @@ function receive(remote){
  const v=validateContent(remote);
  if(!v.ok)return{ok:false,msg:"Fichier refusé, ton jeu n'a pas changé : "+v.errors[0]};
  const known=CS.pending?CS.pending.remote.revision:CS.base.revision;
- if(remote.revision<=known)return{ok:true,msg:CS.pending?`La révision ${known} est déjà reçue. Elle s'appliquera à la prochaine saison.`:`Tu es à jour (révision ${known}).`};
+ if(remote.revision<=known)return{ok:true,msg:CS.pending?`La révision ${known} est déjà reçue. Elle s'appliquera à ta prochaine saison, ou en revenant à l'accueil.`:`Tu es à jour (révision ${known}).`};
  CS.pending=computePending(remote);saveCS();
  if(!S||atSeasonStart()){const n=applyPending();return{ok:true,msg:`Révision ${CS.active.revision} appliquée. ${n}`,applied:true}}
- return{ok:true,msg:`Révision ${remote.revision} reçue. Elle s'appliquera au début de ta prochaine saison, pour ne pas changer les règles en cours de route.`};
+ return{ok:true,msg:`Révision ${remote.revision} reçue. Elle s'appliquera à ta prochaine saison, ou en revenant à l'accueil.`};
 }
 function applyPending(){
  const p=CS.pending;if(!p)return null;
@@ -83,12 +93,12 @@ function updView(){
  <div><h2 style="font-size:38px">Mises à jour du jeu</h2><p class="dim">Version installée : révision ${a.revision}, du ${esc(a.updatedAt||"")}. ${a.notes?esc(a.notes):""}</p>
  <p class="dim" style="font-size:14px">Dernière vérification : ${when}. Version de l'application : __BUILD_ID__.</p></div>
  ${updMsg?`<div class="flash note" id="upd-msg">${esc(updMsg)}</div>`:""}
- ${CS.pending?`<div class="flash ok">Révision ${CS.pending.remote.revision} prête. ${S&&!atSeasonStart()?"Elle s'appliquera au début de ta prochaine saison.":""}</div>`:""}
+ ${CS.pending?`<div class="flash ok">Révision ${CS.pending.remote.revision} prête. ${S&&!atSeasonStart()?"Elle s'appliquera à ta prochaine saison, ou en revenant à l'accueil.":""}</div>`:""}
  ${(CS.conflicts||[]).length?`<section class="stack" style="gap:8px"><div class="lab">À trancher : modifié des deux côtés</div>${CS.conflicts.map((c,i)=>`<div class="conf"><span class="mono">${esc(pathLabel(c.path))}</span><div><span class="dim">Ta version :</span> ${esc(shortJ(c.ours))}</div><div><span class="dim">En ligne :</span> ${esc(shortJ(c.theirs))}</div><div class="row"><button class="btn2" data-conf="${i}" data-keep="mine" id="conf-mine-${i}">Garder la mienne</button><button class="btn2" data-conf="${i}" data-keep="online" id="conf-on-${i}">Garder celle en ligne</button></div></div>`).join("")}</section>`:""}
  <section class="field"><label class="lab" for="upd-url">Adresse du fichier content.json</label><input type="text" id="upd-url" value="${esc(contentUrl()||"")}" placeholder="https://tonpseudo.github.io/cdl-destiny/content.json"><div class="row"><button class="btn2" data-upd="check" id="upd-check">Vérifier maintenant</button></div></section>
  <section class="field"><label class="lab" for="upd-text">Importer du JSON à la main</label><textarea id="upd-text" placeholder='Colle ici le fichier complet, ou juste une modification, par exemple {"rules":{"qualifiers":{"CDL":6}}}'></textarea><div class="row"><button class="btn2" data-upd="import" id="upd-import">Importer</button><label class="ghost" for="upd-file" style="cursor:pointer">Choisir un fichier</label><input type="file" id="upd-file" accept=".json,application/json" hidden>${CS.local?'<button class="ghost" data-upd="reset" id="upd-reset">Supprimer mes modifications locales</button>':""}</div></section>
  <p class="fine">Les textes, scénarios et règles s'appliquent à la saison suivante. Les changements d'effectifs de départ s'appliquent aux nouvelles carrières : ta carrière en cours garde son propre monde.</p>
- ${S?"":'<div><button class="ghost" data-tab="carriere" id="upd-back">Retour à la création</button></div>'}
+ ${S?"":'<div><button class="ghost" data-tab="carriere" id="upd-back">Retour à l\'accueil</button></div>'}
  </div>`;
 }
 document.addEventListener("change",e=>{if(e.target.id!=="upd-file"||!e.target.files[0])return;const r=new FileReader();r.onload=()=>{document.getElementById("upd-text").value=r.result};r.readAsText(e.target.files[0])});
@@ -97,9 +107,9 @@ function boot(){
  CS=saved&&saved.active&&validateContent(saved.active).ok&&validateContent(saved.base).ok?saved:freshCS();
  if(saved&&CS!==saved)updMsg="La version enregistrée était illisible : retour à la version intégrée.";
  hydrate(CS.active);
- S=readKV("cdl-save",BR&&BR.save);
+ STORE=loadStore(readKV("cdl-save",BR&&BR.save));S=null;screen="home";
  if(DEFAULT_CONTENT.revision>CS.base.revision)receive(DEFAULT_CONTENT);
- if(!S||atSeasonStart())applyPending();
+ applyPending();
  render();
  checkUpdates(false);
  addEventListener("online",()=>checkUpdates(false));
