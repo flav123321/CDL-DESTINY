@@ -181,13 +181,58 @@ function objectiveFor(S) {
   if (rank < 7) return { kind: "top", target: 6, text: "Finir dans le top 6 du classement CDL et jouer les Champs." };
   return { kind: "top", target: 8, text: "Se qualifier pour les Champs (top 8 du classement CDL)." };
 }
+/* ---------- Surprises de saison ----------
+   Chaque joueur reçoit une trajectoire cachée en début de saison : normale, explosion ou coup de mou.
+   Elle se révèle semaine après semaine. Tout le monde peut être concerné, jeunes comme stars. */
+function seasonArc(p) {
+  const o = ovr(p);
+  p.ovr0 = round1(o); p.reveal = 0;
+  const upP = p.age <= 21 ? .11 : p.age <= 24 ? .07 : p.age <= 27 ? .04 : .02;
+  const downP = .05 + (p.age >= 27 ? .05 : 0) + (o >= 90 ? .03 : 0);
+  const r = R();
+  if (r < upP) {
+    // Plus un joueur part de bas, plus il peut monter haut.
+    const room = clamp(97 - o, 2, 14);
+    const gain = round1(Math.min(room, rnd(4, 7) + (o < 80 ? rnd(2, 5) : 0) + (R() < .25 ? rnd(2, 4) : 0)));
+    p.arc = { t: "up", left: gain };
+    p.pot = Math.max(p.pot, Math.min(99, Math.round(o + gain + rnd(0, 3))));
+  } else if (r < upP + downP) {
+    p.arc = { t: "down", left: round1(rnd(2.5, 6.5)) };
+  } else p.arc = null;
+}
+function arcWeek(p) {
+  if (!p.arc || p.arc.left <= 0) return;
+  // Chaque semaine, une part du changement s'applique, avec du bruit.
+  const step = Math.min(p.arc.left, p.arc.left / Math.max(2, rnd(6, 12)) + rnd(0, .25));
+  p.arc.left = round1(p.arc.left - step);
+  const keys = p.arc.t === "up" ? ["aim", "move", "sense", "mental"] : ["aim", "move", "sense"];
+  for (const k of keys) p[k] = clamp(round1(p[k] + (p.arc.t === "up" ? 1 : -1) * step * rnd(.6, 1.4)), 40, 99);
+  if (p.arc.t === "down") p.form = clamp(p.form - .25, -6, 6);
+}
+function seasonDelta(p) { return round1(ovr(p) - (p.ovr0 == null ? ovr(p) : p.ovr0)); }
+function revealArc(S, p) {
+  if (p.ovr0 == null) { p.ovr0 = round1(ovr(p)); p.reveal = 0; }
+  const d = seasonDelta(p);
+  const t = p.teamId ? S.teams[p.teamId] : null;
+  if (!t || (t.div !== "CDL" && p.teamId !== S.userTeam && d < 6)) return;
+  const mine = p.teamId === S.userTeam;
+  const where = t ? ` (${t.tag})` : "";
+  if (d >= 4 && p.reveal < 1) { p.reveal = 1; addNews(S, `${p.name}${where} est en feu : +${Math.round(d)} de note depuis le début de saison.`, mine ? "good" : "info"); }
+  else if (d >= 8 && p.reveal < 2) { p.reveal = 2; addNews(S, `Saison de folie pour ${p.name}${where} : +${Math.round(d)} ! Tout le monde en parle.`, mine ? "good" : "info"); }
+  else if (d <= -3 && p.reveal > -1) { p.reveal = -1; addNews(S, `${p.name}${where} traverse un coup de mou : ${Math.round(d)} de note cette saison.`, mine ? "bad" : "info"); }
+}
+function movers(S, n) {
+  const ps = Object.values(S.players).filter(p => !p.retired && p.teamId && p.ovr0 != null);
+  const arr = ps.map(p => ({ id: p.id, name: p.name, team: p.teamId, d: seasonDelta(p), now: Math.round(ovr(p)), from: Math.round(p.ovr0) }));
+  return { up: arr.slice().sort((a, b) => b.d - a.d).slice(0, n).filter(x => x.d >= .5), down: arr.slice().sort((a, b) => a.d - b.d).slice(0, n).filter(x => x.d <= -.5) };
+}
 function startSeason(S, first) {
   S.phase = "season"; S.step = 0; S.bracket = null;
   S.schedule = buildSchedule(S);
   S.points = {}; S.qual = {}; S.majors = [];
   for (const id of S.order) S.points[id] = 0;
   resetQual(S);
-  for (const p of Object.values(S.players)) p.ss = { k: 0, d: 0, maps: 0, mvp: 0 };
+  for (const p of Object.values(S.players)) { p.ss = { k: 0, d: 0, maps: 0, mvp: 0 }; if (!p.retired) seasonArc(p); }
   S.objective = objectiveFor(S);
   S.majorWins = 0;
   S.results = [];
@@ -489,6 +534,9 @@ function applySeries(S, ser) {
     p.car.k += st.k; p.car.d += st.d; p.car.maps += st.maps;
     const kd = st.k / Math.max(1, st.d);
     p.form = clamp(Math.round((p.form * .7 + (kd - 1) * 4) * 10) / 10, -6, 6);
+    // Une grosse série fait progresser, une série ratée fait un peu reculer.
+    if (st.maps >= 3 && kd >= 1.3 && ovr(p) < p.pot + 2) { const k = pick(["aim", "move", "sense", "mental"]); p[k] = clamp(round1(p[k] + rnd(.1, .35)), 40, 99); }
+    else if (st.maps >= 3 && kd <= .7) { const k = pick(["aim", "move", "sense"]); p[k] = clamp(round1(p[k] - rnd(.05, .2)), 40, 99); }
   }
   const best = Object.entries(ser.stats).sort((x, y) => (y[1].k - y[1].d) - (x[1].k - x[1].d))[0];
   if (best && S.players[best[0]]) { S.players[best[0]].ss.mvp++; ser.mvp = best[0]; }
@@ -680,6 +728,7 @@ function weekly(S, out) {
     }
   }
   for (const p of Object.values(S.players)) if (!p.teamId) growPlayer(p, "strat", .5);
+  for (const p of Object.values(S.players)) if (!p.retired) { arcWeek(p); revealArc(S, p); }
   maybeEvent(S);
   if (S.finances.cash < 0 && S.week % 3 === 0) addNews(S, `Trésorerie négative : ${fmtMoney(S.finances.cash)}. Le conseil s'inquiète.`, "bad"), S.board = clamp(S.board - 4, 0, 100);
 }
@@ -946,7 +995,16 @@ function endSeason(S, out) {
     champion: champ ? champ.champion : null, cash: S.finances.cash, mvp: mvp ? { name: mvp.name, kd: round1(mvp.ss.k / Math.max(1, mvp.ss.d) * 100) / 100, team: mvp.teamId } : null,
     majors: S.majors.map(m => ({ name: m.name, champion: m.champion, place: m.place.indexOf(S.userTeam) + 1 })),
   };
+  const mv = movers(S, 5);
+  rec.risers = mv.up.map(x => ({ name: x.name, team: x.team, d: x.d, from: x.from, now: x.now }));
+  rec.fallers = mv.down.map(x => ({ name: x.name, team: x.team, d: x.d, from: x.from, now: x.now }));
   S.history.push(rec);
+  // Le potentiel des jeunes est revu selon leur saison.
+  for (const p of Object.values(S.players)) {
+    if (p.retired || p.ovr0 == null) continue;
+    const d = seasonDelta(p);
+    if (p.age <= 23) p.pot = clamp(Math.round(p.pot + (d >= 4 ? rnd(0, 3) : d <= -2 ? -rnd(1, 3) : rnd(-2, 2))), Math.round(ovr(p)), 99);
+  }
   if (ok) money(S, 150000, "Bonus du conseil : objectif atteint");
   // Contrats, âge, progression, retraites
   for (const p of Object.values(S.players)) {
@@ -984,6 +1042,7 @@ function endSeason(S, out) {
   if (champ) txt += ` Champs : ${champ.champion === S.userTeam ? "champion !" : champPlace ? champPlace + "e" : "non qualifié"}.`;
   if (exp.length) txt += ` Fin de contrat : ${exp.map(p => p.name).join(", ")}. Prolonge-les dans l'onglet Effectif avant de lancer la nouvelle saison, sinon ils partiront.`;
   if (ret.length) txt += ` ${ret.map(p => p.name).join(", ")} annonce${ret.length > 1 ? "nt" : ""} sa retraite à la fin de la saison.`;
+  if (rec.risers.length) txt += ` Révélation de l'année : ${rec.risers[0].name} (${rec.risers[0].from} → ${rec.risers[0].now}).`;
   pushInbox(S, { from: "Conseil d'administration", title: `Bilan de la saison ${S.season}`, text: txt, read: false });
   if (S.board < 15) {
     S.over = true;
@@ -1028,7 +1087,7 @@ const API = {
   setData, newGame, advance, nextSeason, userPair, newSeries, recordMap, createMapSim, stepMap, runMap, setTactic, timeout, aiTactic,
   teamRating, effRating, starters, roleCheck, ovr, pOvr, salaryDemand, marketValue, askingFee, interest, makeOffer, negotiate, release, releaseCost,
   setRole, swapStarter, moveInRoster, marketList, qualTable, pointsTable, weeklyIncome, payroll, answer, pendingChoices, fmtMoney, flag,
-  ROLES, MODES, TACTICS, PLANS, TRAINING, WEEKS_PER_SEASON, aliveOf,
+  seasonDelta, movers, ROLES, MODES, TACTICS, PLANS, TRAINING, WEEKS_PER_SEASON, aliveOf,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = API; else root.ENGINE = API;
 })(typeof window !== "undefined" ? window : globalThis);

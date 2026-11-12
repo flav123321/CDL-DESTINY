@@ -223,6 +223,9 @@ textarea{font:12px/1.4 var(--mono);min-height:90px;resize:vertical}
 .sbt tfoot td{color:var(--dim);font-size:13px;border-bottom:0}
 .sbt .rl{display:inline-block;min-width:34px;margin-right:6px;font:500 10px/1 var(--mono);color:var(--dim);letter-spacing:.06em}
 .carry{color:var(--accent)}
+.dlt{display:block;font:600 11px/1.3 var(--mono);letter-spacing:0;margin-top:3px}
+.dlt.up{color:var(--win)} .dlt.dn{color:var(--loss)}
+.kv b .dlt{display:inline;font-size:13px;margin-left:4px}
 @media(max-width:560px){.lhead .t b{display:none}.lhead .crest.lg{min-width:54px;height:40px;font-size:19px}.mapbar .sc{font-size:28px}}
 @media(max-width:880px){.feed{min-height:0}.feed li:nth-child(n+4){display:none}}
 </style>
@@ -259,6 +262,7 @@ const fmt1 = v => (Math.round(v * 10) / 10).toFixed(1);
 const kd = (k, d) => (k / Math.max(1, d)).toFixed(2);
 function toast(t) { const el = $("#toast"); el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.h); toast.h = setTimeout(() => el.innerHTML = "", 3600); }
 function potLabel(p) { if (p.teamId === S.userTeam) return String(p.pot); const lo = Math.max(E.pOvr(p), p.pot - 3), hi = Math.min(99, p.pot + 2); return lo === hi ? String(lo) : `${lo}-${hi}`; }
+function dBadge(p) { const d = Math.round(E.seasonDelta(p)); if (!d) return ""; return `<span class="dlt ${d > 0 ? "up" : "dn"}" title="Évolution depuis le début de saison">${d > 0 ? "▲ +" : "▼ "}${d}</span>`; }
 function lum(hex) { const n = parseInt(hex.slice(1), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
 function sideColors(a, b) {
   let ca = T(a).color, cb = T(b).color;
@@ -392,7 +396,7 @@ function vFixture() {
 function vFlash(o) {
   if (o.seasonEnd) {
     const h = o.seasonEnd;
-    return `<section class="result"><span class="lab">Saison ${h.season} terminée</span><h2>${h.rank}e au classement CDL</h2><p>${h.ok ? '<span class="win">Objectif atteint.</span>' : '<span class="loss">Objectif manqué.</span>'} ${esc(h.objective)}</p>${h.mvp ? `<p class="note">Meilleur K/D de la saison : ${esc(h.mvp.name)} (${h.mvp.kd.toFixed ? h.mvp.kd.toFixed(2) : h.mvp.kd}).</p>` : ""}<div><button class="link" data-act="dismiss">Fermer</button></div></section>`;
+    return `<section class="result"><span class="lab">Saison ${h.season} terminée</span><h2>${h.rank}e au classement CDL</h2><p>${h.ok ? '<span class="win">Objectif atteint.</span>' : '<span class="loss">Objectif manqué.</span>'} ${esc(h.objective)}</p>${h.mvp ? `<p class="note">Meilleur K/D de la saison : ${esc(h.mvp.name)} (${h.mvp.kd.toFixed ? h.mvp.kd.toFixed(2) : h.mvp.kd}).</p>` : ""}${h.risers && h.risers.length ? `<p class="note">Révélations : ${h.risers.slice(0, 3).map(r => `${esc(r.name)} ${r.from} → ${r.now}`).join(" · ")}${h.fallers && h.fallers.length ? `. Coups de mou : ${h.fallers.slice(0, 2).map(r => `${esc(r.name)} ${r.from} → ${r.now}`).join(" · ")}` : ""}.</p>` : ""}<div><button class="link" data-act="dismiss">Fermer</button></div></section>`;
   }
   const r = o.user;
   const others = (o.others || []).slice(0, 8);
@@ -481,7 +485,7 @@ function vEffectif() {
   const warn = E.roleCheck(S, t.id);
   const pay = E.payroll(S, t.id);
   const card = (p, i) => `<article class="pcard ${i < 4 ? "st" : ""}">
-    <div class="ov">${E.pOvr(p)}<small>${p.role}</small></div>
+    <div class="ov">${E.pOvr(p)}<small>${p.role}</small>${dBadge(p)}</div>
     <div style="min-width:0"><div class="nm">${fl(p.nat)}${esc(p.name)}</div>
       <div class="meta">${i < 4 ? "Titulaire" : "Remplaçant"} · ${p.age} ans · pot. ${potLabel(p)} · ${M(p.salary)}/an · ${p.expiring ? '<span class="warn">fin de contrat</span>' : p.years + " saison" + (p.years > 1 ? "s" : "")}</div></div>
     <div class="acts">
@@ -514,7 +518,7 @@ function vMarche() {
     <div class="plist">${list.map(p => {
       const fee = E.askingFee(S, p);
       return `<button class="mrow" data-act="player" data-id="${p.id}">
-        <span class="ov">${E.pOvr(p)}</span>
+        <span class="ov">${E.pOvr(p)}${dBadge(p)}</span>
         <span style="min-width:0"><span class="nm">${fl(p.nat)}${esc(p.name)}</span><br><span class="note">${p.role} · ${p.age} ans · pot. ${potLabel(p)} · ${p.teamId ? esc(T(p.teamId).name) : "Libre"}</span></span>
         <span class="px"><span class="lab">Salaire demandé</span><b>${M(E.salaryDemand(p))}</b>${fee ? `<span class="note">Transfert ${M(fee)}</span>` : ""}</span>
       </button>`;
@@ -523,7 +527,7 @@ function vMarche() {
 
 /* ---------- Compétition ---------- */
 function vCompetition() {
-  const tabs = [["cdl", "Classement"], ["qual", "Qualifs"], ["bracket", "Tournoi"], ["cal", "Calendrier"], ["hist", "Palmarès"]];
+  const tabs = [["cdl", "Classement"], ["qual", "Qualifs"], ["bracket", "Tournoi"], ["cal", "Calendrier"], ["hist", "Palmarès et révélations"]];
   let body = "";
   if (ui.comp === "cdl") body = vPointsTable(false);
   else if (ui.comp === "qual") body = vSideTableFull();
@@ -571,10 +575,20 @@ function vCalendar() {
   });
   return `<section class="sec"><h3>Calendrier ${S.season}</h3><div class="tw"><table><thead><tr><th>#</th><th>Étape</th><th>Résultat</th></tr></thead><tbody>${rows.join("")}</tbody></table></div></section>`;
 }
+function vMovers() {
+  const mv = E.movers(S, 6);
+  const row = (x, up) => `<tr class="${x.team === S.userTeam ? "me" : ""}"><td>${esc(x.name)}</td><td>${T(x.team) ? esc(T(x.team).tag) : ""}</td><td class="n">${x.from}</td><td class="n">${x.now}</td><td class="n ${up ? "win" : "loss"}">${x.d > 0 ? "+" : ""}${Math.round(x.d)}</td></tr>`;
+  const tb = (title, list, up) => `<div style="min-width:0"><h3>${title}</h3>${list.length ? `<div class="tw"><table><thead><tr><th>Joueur</th><th>Équipe</th><th class="n">Début</th><th class="n">Actuel</th><th class="n">Écart</th></tr></thead><tbody>${list.map(x => row(x, up)).join("")}</tbody></table></div>` : '<p class="note">Rien de marquant pour l\'instant.</p>'}</div>`;
+  const past = S.history.filter(h => h.risers && h.risers.length).slice(-3).reverse();
+  return `<section class="sec"><h2>Révélations et coups de mou</h2><p class="note">Chaque saison, n'importe quel joueur peut exploser ou s'effondrer. Ça ne se voit qu'au fil des semaines.</p>
+    <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">${tb("En feu", mv.up, true)}${tb("En difficulté", mv.down, false)}</div>
+    ${past.length ? `<p class="note">${past.map(h => `Révélation ${h.season} : ${esc(h.risers[0].name)} (${h.risers[0].from} → ${h.risers[0].now})`).join(" · ")}</p>` : ""}</section>`;
+}
 function vHistory() {
   const top = Object.values(S.players).filter(p => p.ss.maps >= 6).sort((a, b) => b.ss.k / Math.max(1, b.ss.d) - a.ss.k / Math.max(1, a.ss.d)).slice(0, 10);
   return `<section class="sec"><h3>Ton palmarès</h3><p>${S.titles.length ? S.titles.map(esc).join(" · ") : '<span class="note">Pas encore de titre.</span>'}</p>
     ${S.history.length ? `<div class="tw"><table><thead><tr><th>Saison</th><th class="n">Rang</th><th>Objectif</th><th>Champions</th><th>Majors gagnés</th></tr></thead><tbody>${S.history.map(h => `<tr><td class="mono">${h.season}</td><td class="n">${h.rank}</td><td class="${h.ok ? "win" : "loss"}">${h.ok ? "Atteint" : "Manqué"}</td><td>${h.champion ? esc(T(h.champion).tag) : "-"}</td><td class="n">${h.majorWins}</td></tr>`).join("")}</tbody></table></div>` : ""}</section>
+    ${vMovers()}
     <section class="sec"><h3>Meilleurs K/D de la saison</h3><div class="tw"><table><thead><tr><th>Joueur</th><th>Équipe</th><th class="n">Maps</th><th class="n">K</th><th class="n">D</th><th class="n">K/D</th></tr></thead><tbody>${top.map(p => `<tr class="${p.teamId === S.userTeam ? "me" : ""}"><td>${fl(p.nat)}${esc(p.name)}</td><td>${p.teamId ? esc(T(p.teamId).tag) : "Libre"}</td><td class="n">${p.ss.maps}</td><td class="n">${p.ss.k}</td><td class="n">${p.ss.d}</td><td class="n">${kd(p.ss.k, p.ss.d)}</td></tr>`).join("")}</tbody></table></div></section>`;
 }
 
@@ -633,7 +647,7 @@ function renderSheet() {
   el.innerHTML = `<div class="sheet-bg" data-act="close-bg"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(p.name)}">
     <div class="rowx"><span class="lab">${p.teamId ? esc(T(p.teamId).name) : "Agent libre"} · ${p.role}</span><span class="spacer"></span><button class="link" data-act="close">Fermer</button></div>
     <h2>${fl(p.nat)}${esc(p.name)}</h2>
-    <div class="kv"><div><span class="lab">Note</span><b>${E.pOvr(p)}</b></div><div><span class="lab">Potentiel</span><b>${potLabel(p)}</b></div><div><span class="lab">Âge</span><b>${p.age}</b></div><div><span class="lab">K/D saison</span><b>${kd(p.ss.k, p.ss.d)}</b></div><div><span class="lab">Titres</span><b>${p.car.titles}</b></div></div>
+    <div class="kv"><div><span class="lab">Note</span><b>${E.pOvr(p)} ${dBadge(p)}</b></div><div><span class="lab">Début de saison</span><b>${p.ovr0 != null ? Math.round(p.ovr0) : E.pOvr(p)}</b></div><div><span class="lab">Potentiel</span><b>${potLabel(p)}</b></div><div><span class="lab">Âge</span><b>${p.age}</b></div><div><span class="lab">K/D saison</span><b>${kd(p.ss.k, p.ss.d)}</b></div><div><span class="lab">Titres</span><b>${p.car.titles}</b></div></div>
     ${bars(p)}
     <div class="rowx">${cond(p)}</div>
     <div class="kv"><div><span class="lab">Note en SMG</span><b>${Math.round(E.ovr(p, "SMG"))}</b></div><div><span class="lab">Note en AR</span><b>${Math.round(E.ovr(p, "AR"))}</b></div><div><span class="lab">Note en Flex</span><b>${Math.round(E.ovr(p, "Flex"))}</b></div></div>
