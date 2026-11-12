@@ -21,13 +21,14 @@ const ROLE_W = {
   AR: { aim: .3, move: .15, sense: .35, mental: .2 },
   Flex: { aim: .27, move: .25, sense: .28, mental: .2 },
 };
-const MODES = { HP: "Hardpoint", SND: "Recherche et Destruction", CTRL: "Contrôle" };
+const MODES = { HP: "Hardpoint", SND: "Recherche et Destruction", OVL: "Overload", CTRL: "Contrôle" };
+// Pool de maps CDL 2026 (Black Ops 7), tel qu'en fin de saison (Stage IV).
 const MAPS = {
-  HP: ["Fonderie", "Marina", "Téléphérique", "Dépôt 9", "Citadelle"],
-  SND: ["Marina", "Serre", "Gare d'Orsk", "Fonderie", "Hangar 4"],
-  CTRL: ["Citadelle", "Serre", "Dépôt 9"],
+  HP: ["Colossus", "Den", "Scar", "Sake", "Gridlock", "Hacienda"],
+  SND: ["Den", "Raid", "Gridlock", "Fringe", "Sake", "Hacienda"],
+  OVL: ["Den", "Exposure", "Scar", "Gridlock"],
 };
-const SERIES_MODES = ["HP", "SND", "CTRL", "HP", "SND", "CTRL", "HP", "SND", "CTRL"];
+const SERIES_MODES = ["HP", "SND", "OVL", "HP", "SND", "OVL", "HP", "SND", "OVL"];
 const TACTICS = {
   agressif: { label: "Agressif", att: 1.6, def: 0.2, rate: 1.25 },
   equilibre: { label: "Équilibré", att: 0.8, def: 0.8, rate: 1 },
@@ -240,8 +241,8 @@ function createMapSim(S, mode, mapName, ids, tactics) {
   };
   if (mode === "HP") Object.assign(sim, { hill: 0, hillT: 0, holder: -1, rot: 6, limit: 900 });
   if (mode === "SND") Object.assign(sim, { round: 0, att: R() < .5 ? 0 : 1, rt: 0, planted: false, plantT: 0, site: "A", first: ri(14, 30), target: 6 });
-  if (mode === "CTRL") Object.assign(sim, { round: 0, att: R() < .5 ? 0 : 1, rt: 0, lives: [30, 30], prog: 0, presence: -1, target: 3 });
-  if (mode !== "HP") resetRound(sim);
+  if (mode === "OVL") Object.assign(sim, { x: 50, holder: -1, pause: 6, target: 8, limit: 600 });
+  if (mode === "SND") resetRound(sim);
   return sim;
 }
 function ev(sim, type, text, extra) { sim.events.push(Object.assign({ n: sim.seq++, t: sim.t, type, text }, extra || {})); }
@@ -301,7 +302,6 @@ function resetRound(sim) {
   for (const s of sim.sides) for (const p of s.players) { p.alive = true; }
   sim.rt = 0;
   if (sim.mode === "SND") { sim.planted = false; sim.plantT = 0; sim.site = R() < .5 ? "A" : "B"; sim.first = ri(12, 30); }
-  if (sim.mode === "CTRL") { sim.lives = [30, 30]; sim.prog = 0; sim.presence = 1 - sim.att; }
 }
 function rate(sim, base, i) { return base * TACTICS[sim.sides[i].tac].rate; }
 function stepMap(sim) {
@@ -310,7 +310,7 @@ function stepMap(sim) {
   for (const i of [0, 1]) sim.mom[i] *= .985;
   if (sim.mode === "HP") stepHP(sim);
   else if (sim.mode === "SND") stepSND(sim);
-  else stepCTRL(sim);
+  else stepOVL(sim);
 }
 function finishMap(sim, w) {
   sim.done = true; sim.winner = w;
@@ -360,37 +360,33 @@ function stepSND(sim) {
     sim.round++; sim.att = 1 - sim.att; resetRound(sim);
   }
 }
-function stepCTRL(sim) {
-  sim.rt++;
+function stepOVL(sim) {
+  // Overload (simplifié) : un seul engin au centre. L'équipe qui le tient avance vers le but adverse.
+  // x va de 0 (but de l'équipe 0, à gauche) à 100 (but de l'équipe 1, à droite).
   respawn(sim);
-  const att = sim.att, def = 1 - att;
-  if (R() < rate(sim, .2, att)) {
-    const before = [aliveOf(sim.sides[0]).length, aliveOf(sim.sides[1]).length];
+  if (sim.pause > 0) { sim.pause--; return; }
+  if (sim.holder >= 0 && !aliveOf(sim.sides[sim.holder]).length) { sim.holder = -1; ev(sim, "obj", "L'engin tombe au sol."); }
+  const def = sim.holder < 0 ? -1 : 1 - sim.holder;
+  if (R() < (sim.holder < 0 ? .3 : rate(sim, .15, def))) {
     const w = fight(sim, def);
-    if (w >= 0) {
-      const l = 1 - w;
-      const lost = before[l] - aliveOf(sim.sides[l]).length;
-      sim.lives[l] = Math.max(0, sim.lives[l] - lost);
-      const lostW = before[w] - aliveOf(sim.sides[w]).length;
-      sim.lives[w] = Math.max(0, sim.lives[w] - lostW);
-      sim.presence = w;
+    if (w >= 0 && w !== sim.holder && aliveOf(sim.sides[w]).length) {
+      ev(sim, "obj", sim.holder < 0 ? `${sim.sides[w].tag} récupère l'engin.` : `${sim.sides[w].tag} reprend l'engin !`, { side: w });
+      sim.holder = w;
     }
   }
-  if (sim.presence === att && aliveOf(sim.sides[att]).length) {
-    const old = sim.prog; sim.prog += 3;
-    if (old < 100 && sim.prog >= 100) ev(sim, "obj", `${sim.sides[att].tag} capture la zone A.`, { side: att });
+  if (sim.holder >= 0) {
+    sim.x += sim.holder === 0 ? 2.4 : -2.4;
+    if (sim.x >= 100 || sim.x <= 0) {
+      const w = sim.holder;
+      sim.score[w]++;
+      ev(sim, "round", `BUT pour ${sim.sides[w].tag} ! ${sim.score[0]}-${sim.score[1]}.`, { side: w });
+      if (sim.score[w] >= sim.target) return finishMap(sim, w);
+      sim.x = 50; sim.holder = -1; sim.pause = 6;
+      for (const sd of sim.sides) for (const p of sd.players) p.alive = true;
+    }
   }
-  let w = -1, why = "";
-  if (sim.prog >= 200) { w = att; why = "capture les deux zones"; }
-  else if (sim.lives[def] <= 0) { w = att; why = "épuise les vies adverses"; }
-  else if (sim.lives[att] <= 0) { w = def; why = "épuise les vies adverses"; }
-  else if (sim.rt >= 120) { w = def; why = "défend jusqu'au bout"; }
-  if (w >= 0) {
-    sim.score[w]++;
-    ev(sim, "round", `Manche ${sim.round + 1} pour ${sim.sides[w].tag} : ${why}.`, { side: w });
-    if (sim.score[w] >= sim.target) return finishMap(sim, w);
-    sim.round++; sim.att = 1 - sim.att; resetRound(sim);
-  }
+  if (sim.t >= sim.limit && sim.score[0] !== sim.score[1]) finishMap(sim, sim.score[0] > sim.score[1] ? 0 : 1);
+  else if (sim.t >= sim.limit + 300) finishMap(sim, sim.x < 50 ? 1 : 0);
 }
 function runMap(sim) { let g = 0; while (!sim.done && g++ < 5000) stepMap(sim); if (!sim.done) finishMap(sim, sim.score[0] >= sim.score[1] ? 0 : 1); return sim; }
 

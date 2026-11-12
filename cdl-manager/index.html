@@ -260,13 +260,14 @@ const ROLE_W = {
   AR: { aim: .3, move: .15, sense: .35, mental: .2 },
   Flex: { aim: .27, move: .25, sense: .28, mental: .2 },
 };
-const MODES = { HP: "Hardpoint", SND: "Recherche et Destruction", CTRL: "Contrôle" };
+const MODES = { HP: "Hardpoint", SND: "Recherche et Destruction", OVL: "Overload", CTRL: "Contrôle" };
+// Pool de maps CDL 2026 (Black Ops 7), tel qu'en fin de saison (Stage IV).
 const MAPS = {
-  HP: ["Fonderie", "Marina", "Téléphérique", "Dépôt 9", "Citadelle"],
-  SND: ["Marina", "Serre", "Gare d'Orsk", "Fonderie", "Hangar 4"],
-  CTRL: ["Citadelle", "Serre", "Dépôt 9"],
+  HP: ["Colossus", "Den", "Scar", "Sake", "Gridlock", "Hacienda"],
+  SND: ["Den", "Raid", "Gridlock", "Fringe", "Sake", "Hacienda"],
+  OVL: ["Den", "Exposure", "Scar", "Gridlock"],
 };
-const SERIES_MODES = ["HP", "SND", "CTRL", "HP", "SND", "CTRL", "HP", "SND", "CTRL"];
+const SERIES_MODES = ["HP", "SND", "OVL", "HP", "SND", "OVL", "HP", "SND", "OVL"];
 const TACTICS = {
   agressif: { label: "Agressif", att: 1.6, def: 0.2, rate: 1.25 },
   equilibre: { label: "Équilibré", att: 0.8, def: 0.8, rate: 1 },
@@ -479,8 +480,8 @@ function createMapSim(S, mode, mapName, ids, tactics) {
   };
   if (mode === "HP") Object.assign(sim, { hill: 0, hillT: 0, holder: -1, rot: 6, limit: 900 });
   if (mode === "SND") Object.assign(sim, { round: 0, att: R() < .5 ? 0 : 1, rt: 0, planted: false, plantT: 0, site: "A", first: ri(14, 30), target: 6 });
-  if (mode === "CTRL") Object.assign(sim, { round: 0, att: R() < .5 ? 0 : 1, rt: 0, lives: [30, 30], prog: 0, presence: -1, target: 3 });
-  if (mode !== "HP") resetRound(sim);
+  if (mode === "OVL") Object.assign(sim, { x: 50, holder: -1, pause: 6, target: 8, limit: 600 });
+  if (mode === "SND") resetRound(sim);
   return sim;
 }
 function ev(sim, type, text, extra) { sim.events.push(Object.assign({ n: sim.seq++, t: sim.t, type, text }, extra || {})); }
@@ -540,7 +541,6 @@ function resetRound(sim) {
   for (const s of sim.sides) for (const p of s.players) { p.alive = true; }
   sim.rt = 0;
   if (sim.mode === "SND") { sim.planted = false; sim.plantT = 0; sim.site = R() < .5 ? "A" : "B"; sim.first = ri(12, 30); }
-  if (sim.mode === "CTRL") { sim.lives = [30, 30]; sim.prog = 0; sim.presence = 1 - sim.att; }
 }
 function rate(sim, base, i) { return base * TACTICS[sim.sides[i].tac].rate; }
 function stepMap(sim) {
@@ -549,7 +549,7 @@ function stepMap(sim) {
   for (const i of [0, 1]) sim.mom[i] *= .985;
   if (sim.mode === "HP") stepHP(sim);
   else if (sim.mode === "SND") stepSND(sim);
-  else stepCTRL(sim);
+  else stepOVL(sim);
 }
 function finishMap(sim, w) {
   sim.done = true; sim.winner = w;
@@ -599,37 +599,33 @@ function stepSND(sim) {
     sim.round++; sim.att = 1 - sim.att; resetRound(sim);
   }
 }
-function stepCTRL(sim) {
-  sim.rt++;
+function stepOVL(sim) {
+  // Overload (simplifié) : un seul engin au centre. L'équipe qui le tient avance vers le but adverse.
+  // x va de 0 (but de l'équipe 0, à gauche) à 100 (but de l'équipe 1, à droite).
   respawn(sim);
-  const att = sim.att, def = 1 - att;
-  if (R() < rate(sim, .2, att)) {
-    const before = [aliveOf(sim.sides[0]).length, aliveOf(sim.sides[1]).length];
+  if (sim.pause > 0) { sim.pause--; return; }
+  if (sim.holder >= 0 && !aliveOf(sim.sides[sim.holder]).length) { sim.holder = -1; ev(sim, "obj", "L'engin tombe au sol."); }
+  const def = sim.holder < 0 ? -1 : 1 - sim.holder;
+  if (R() < (sim.holder < 0 ? .3 : rate(sim, .15, def))) {
     const w = fight(sim, def);
-    if (w >= 0) {
-      const l = 1 - w;
-      const lost = before[l] - aliveOf(sim.sides[l]).length;
-      sim.lives[l] = Math.max(0, sim.lives[l] - lost);
-      const lostW = before[w] - aliveOf(sim.sides[w]).length;
-      sim.lives[w] = Math.max(0, sim.lives[w] - lostW);
-      sim.presence = w;
+    if (w >= 0 && w !== sim.holder && aliveOf(sim.sides[w]).length) {
+      ev(sim, "obj", sim.holder < 0 ? `${sim.sides[w].tag} récupère l'engin.` : `${sim.sides[w].tag} reprend l'engin !`, { side: w });
+      sim.holder = w;
     }
   }
-  if (sim.presence === att && aliveOf(sim.sides[att]).length) {
-    const old = sim.prog; sim.prog += 3;
-    if (old < 100 && sim.prog >= 100) ev(sim, "obj", `${sim.sides[att].tag} capture la zone A.`, { side: att });
+  if (sim.holder >= 0) {
+    sim.x += sim.holder === 0 ? 2.4 : -2.4;
+    if (sim.x >= 100 || sim.x <= 0) {
+      const w = sim.holder;
+      sim.score[w]++;
+      ev(sim, "round", `BUT pour ${sim.sides[w].tag} ! ${sim.score[0]}-${sim.score[1]}.`, { side: w });
+      if (sim.score[w] >= sim.target) return finishMap(sim, w);
+      sim.x = 50; sim.holder = -1; sim.pause = 6;
+      for (const sd of sim.sides) for (const p of sd.players) p.alive = true;
+    }
   }
-  let w = -1, why = "";
-  if (sim.prog >= 200) { w = att; why = "capture les deux zones"; }
-  else if (sim.lives[def] <= 0) { w = att; why = "épuise les vies adverses"; }
-  else if (sim.lives[att] <= 0) { w = def; why = "épuise les vies adverses"; }
-  else if (sim.rt >= 120) { w = def; why = "défend jusqu'au bout"; }
-  if (w >= 0) {
-    sim.score[w]++;
-    ev(sim, "round", `Manche ${sim.round + 1} pour ${sim.sides[w].tag} : ${why}.`, { side: w });
-    if (sim.score[w] >= sim.target) return finishMap(sim, w);
-    sim.round++; sim.att = 1 - sim.att; resetRound(sim);
-  }
+  if (sim.t >= sim.limit && sim.score[0] !== sim.score[1]) finishMap(sim, sim.score[0] > sim.score[1] ? 0 : 1);
+  else if (sim.t >= sim.limit + 300) finishMap(sim, sim.x < 50 ? 1 : 0);
 }
 function runMap(sim) { let g = 0; while (!sim.done && g++ < 5000) stepMap(sim); if (!sim.done) finishMap(sim, sim.score[0] >= sim.score[1] ? 0 : 1); return sim; }
 
@@ -1752,7 +1748,8 @@ function objPoint(L, si) {
   const sim = L.sim, lay = L.layout;
   if (sim.mode === "HP") return lay.hills[sim.hill];
   if (sim.mode === "SND") { const s = lay.sites[sim.site]; if (si === sim.att || sim.planted) return s; return R2() < .5 ? lay.sites.A : lay.sites.B; }
-  return sim.prog < 100 ? lay.zones[0] : lay.zones[1];
+  if (sim.holder < 0) return { x: sim.x, y: 30 };
+  return si === sim.holder ? { x: sim.x + (si === 0 ? 4 : -4), y: 30 } : { x: sim.x + (si === 0 ? -3 : 3), y: 30 };
 }
 const R2 = Math.random;
 function startLive() {
@@ -1827,13 +1824,11 @@ function draw() {
     for (const k of ["A", "B"]) { const s = L.layout.sites[k]; const act = sim.planted && sim.site === k; g.strokeStyle = act ? "#ff7a6b" : "#8fa3aa"; g.lineWidth = act ? 2.5 : 1.5; g.strokeRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy); g.fillStyle = act ? "#ff7a6b" : "#8fa3aa"; g.fillText(k, s.x * sx, s.y * sy); }
     if (sim.planted) { const s = L.layout.sites[sim.site]; const left = Math.max(0, 45 - (sim.rt - sim.plantT)); g.fillStyle = "#ff7a6b"; g.fillText(`${left}s`, s.x * sx, (s.y + 8) * sy); }
   } else {
-    L.layout.zones.forEach((z, i) => {
-      const done = sim.prog >= (i + 1) * 100, cur = Math.floor(sim.prog / 100) === i;
-      g.strokeStyle = done ? col(sim.att) : cur ? "#eaf0f1" : "rgba(234,240,241,.25)"; g.lineWidth = 2; g.beginPath(); g.arc(z.x * sx, z.y * sy, 6 * sx, 0, 7); g.stroke();
-      const pr = Math.max(0, Math.min(100, sim.prog - i * 100)) / 100;
-      if (pr > 0) { g.strokeStyle = col(sim.att); g.lineWidth = 4; g.beginPath(); g.arc(z.x * sx, z.y * sy, 6 * sx + 4, -Math.PI / 2, -Math.PI / 2 + pr * Math.PI * 2); g.stroke(); }
-      g.fillStyle = "#eaf0f1"; g.fillText(i ? "B" : "A", z.x * sx, z.y * sy);
-    });
+    for (const [gx, side] of [[2, 0], [98, 1]]) { g.fillStyle = col(side) + "33"; g.fillRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); g.strokeStyle = col(side); g.lineWidth = 2; g.strokeRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); }
+    const ex = sim.x * sx, ey = 30 * sy;
+    g.strokeStyle = "rgba(234,240,241,.18)"; g.setLineDash([4, 5]); g.lineWidth = 1; g.beginPath(); g.moveTo(4 * sx, ey); g.lineTo(96 * sx, ey); g.stroke(); g.setLineDash([]);
+    g.fillStyle = sim.holder >= 0 ? col(sim.holder) : "#eaf0f1"; g.strokeStyle = "#eaf0f1"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(ex, ey - 7); g.lineTo(ex + 7, ey); g.lineTo(ex, ey + 7); g.lineTo(ex - 7, ey); g.closePath(); g.fill(); g.stroke();
   }
   for (const t of L.tracers) { g.strokeStyle = col(t.side); g.globalAlpha = Math.min(1, t.life * 2.4); g.lineWidth = 1.6; g.beginPath(); g.moveTo(t.x1 * sx, t.y1 * sy); g.lineTo(t.x2 * sx, t.y2 * sy); g.stroke(); }
   g.globalAlpha = 1;
@@ -1868,6 +1863,7 @@ function endMap() {
 }
 function timeStr(sim) {
   if (sim.mode === "HP") { const s = Math.max(0, sim.limit - sim.t); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+  if (sim.mode === "OVL") { const s = Math.max(0, sim.limit - sim.t); return sim.t > sim.limit ? "Prolongation" : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
   return `Manche ${sim.round + 1} · ${sim.rt}s`;
 }
 function updateLive() {
@@ -1877,7 +1873,7 @@ function updateLive() {
   $("#mtime").textContent = timeStr(sim);
   let extra = "";
   if (sim.mode === "SND") extra = `Attaque : ${esc(T(sim.sides[sim.att].id).tag)} · en vie ${E.aliveOf(sim.sides[0]).length}v${E.aliveOf(sim.sides[1]).length}`;
-  if (sim.mode === "CTRL") extra = `Attaque : ${esc(T(sim.sides[sim.att].id).tag)} · vies ${sim.lives[0]}-${sim.lives[1]}`;
+  if (sim.mode === "OVL") extra = sim.holder >= 0 ? `Engin porté par ${esc(T(sim.sides[sim.holder].id).tag)}` : "Engin au sol";
   if (sim.mode === "HP") extra = sim.holder >= 0 ? `Colline tenue par ${esc(T(sim.sides[sim.holder].id).tag)}` : "Colline libre";
   $("#mextra").textContent = extra;
   const [ca, cb] = L.colors;

@@ -752,7 +752,8 @@ function objPoint(L, si) {
   const sim = L.sim, lay = L.layout;
   if (sim.mode === "HP") return lay.hills[sim.hill];
   if (sim.mode === "SND") { const s = lay.sites[sim.site]; if (si === sim.att || sim.planted) return s; return R2() < .5 ? lay.sites.A : lay.sites.B; }
-  return sim.prog < 100 ? lay.zones[0] : lay.zones[1];
+  if (sim.holder < 0) return { x: sim.x, y: 30 };
+  return si === sim.holder ? { x: sim.x + (si === 0 ? 4 : -4), y: 30 } : { x: sim.x + (si === 0 ? -3 : 3), y: 30 };
 }
 const R2 = Math.random;
 function startLive() {
@@ -827,13 +828,11 @@ function draw() {
     for (const k of ["A", "B"]) { const s = L.layout.sites[k]; const act = sim.planted && sim.site === k; g.strokeStyle = act ? "#ff7a6b" : "#8fa3aa"; g.lineWidth = act ? 2.5 : 1.5; g.strokeRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy); g.fillStyle = act ? "#ff7a6b" : "#8fa3aa"; g.fillText(k, s.x * sx, s.y * sy); }
     if (sim.planted) { const s = L.layout.sites[sim.site]; const left = Math.max(0, 45 - (sim.rt - sim.plantT)); g.fillStyle = "#ff7a6b"; g.fillText(`${left}s`, s.x * sx, (s.y + 8) * sy); }
   } else {
-    L.layout.zones.forEach((z, i) => {
-      const done = sim.prog >= (i + 1) * 100, cur = Math.floor(sim.prog / 100) === i;
-      g.strokeStyle = done ? col(sim.att) : cur ? "#eaf0f1" : "rgba(234,240,241,.25)"; g.lineWidth = 2; g.beginPath(); g.arc(z.x * sx, z.y * sy, 6 * sx, 0, 7); g.stroke();
-      const pr = Math.max(0, Math.min(100, sim.prog - i * 100)) / 100;
-      if (pr > 0) { g.strokeStyle = col(sim.att); g.lineWidth = 4; g.beginPath(); g.arc(z.x * sx, z.y * sy, 6 * sx + 4, -Math.PI / 2, -Math.PI / 2 + pr * Math.PI * 2); g.stroke(); }
-      g.fillStyle = "#eaf0f1"; g.fillText(i ? "B" : "A", z.x * sx, z.y * sy);
-    });
+    for (const [gx, side] of [[2, 0], [98, 1]]) { g.fillStyle = col(side) + "33"; g.fillRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); g.strokeStyle = col(side); g.lineWidth = 2; g.strokeRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); }
+    const ex = sim.x * sx, ey = 30 * sy;
+    g.strokeStyle = "rgba(234,240,241,.18)"; g.setLineDash([4, 5]); g.lineWidth = 1; g.beginPath(); g.moveTo(4 * sx, ey); g.lineTo(96 * sx, ey); g.stroke(); g.setLineDash([]);
+    g.fillStyle = sim.holder >= 0 ? col(sim.holder) : "#eaf0f1"; g.strokeStyle = "#eaf0f1"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(ex, ey - 7); g.lineTo(ex + 7, ey); g.lineTo(ex, ey + 7); g.lineTo(ex - 7, ey); g.closePath(); g.fill(); g.stroke();
   }
   for (const t of L.tracers) { g.strokeStyle = col(t.side); g.globalAlpha = Math.min(1, t.life * 2.4); g.lineWidth = 1.6; g.beginPath(); g.moveTo(t.x1 * sx, t.y1 * sy); g.lineTo(t.x2 * sx, t.y2 * sy); g.stroke(); }
   g.globalAlpha = 1;
@@ -868,6 +867,7 @@ function endMap() {
 }
 function timeStr(sim) {
   if (sim.mode === "HP") { const s = Math.max(0, sim.limit - sim.t); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+  if (sim.mode === "OVL") { const s = Math.max(0, sim.limit - sim.t); return sim.t > sim.limit ? "Prolongation" : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
   return `Manche ${sim.round + 1} · ${sim.rt}s`;
 }
 function updateLive() {
@@ -877,7 +877,7 @@ function updateLive() {
   $("#mtime").textContent = timeStr(sim);
   let extra = "";
   if (sim.mode === "SND") extra = `Attaque : ${esc(T(sim.sides[sim.att].id).tag)} · en vie ${E.aliveOf(sim.sides[0]).length}v${E.aliveOf(sim.sides[1]).length}`;
-  if (sim.mode === "CTRL") extra = `Attaque : ${esc(T(sim.sides[sim.att].id).tag)} · vies ${sim.lives[0]}-${sim.lives[1]}`;
+  if (sim.mode === "OVL") extra = sim.holder >= 0 ? `Engin porté par ${esc(T(sim.sides[sim.holder].id).tag)}` : "Engin au sol";
   if (sim.mode === "HP") extra = sim.holder >= 0 ? `Colline tenue par ${esc(T(sim.sides[sim.holder].id).tag)}` : "Colline libre";
   $("#mextra").textContent = extra;
   const [ca, cb] = L.colors;
