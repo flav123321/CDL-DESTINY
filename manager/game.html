@@ -201,16 +201,30 @@ textarea{font:12px/1.4 var(--mono);min-height:90px;resize:vertical}
 .mapbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;background:var(--panel);padding:10px 14px}
 .mapbar .sc{font:900 34px/1 var(--display);margin-left:auto;display:flex;gap:10px;align-items:baseline}
 .arena{width:100%;aspect-ratio:5/3;max-width:100%;display:block;background:#0a1114;border:1px solid var(--line)}
-.lgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+.lgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"map ctrl" "sb feed";gap:14px;align-items:start}
 .lgrid>*{min-width:0}
-@media(max-width:880px){.lgrid{grid-template-columns:minmax(0,1fr)}}
+.lgrid .arena{grid-area:map}.lgrid .lctrl{grid-area:ctrl}.lgrid .sb{grid-area:sb}.lgrid .feed{grid-area:feed}
+@media(max-width:880px){.lgrid{grid-template-columns:minmax(0,1fr);grid-template-areas:"map" "feed" "ctrl" "sb"}}
 .feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px;min-height:150px}
 .feed li{padding:5px 8px;background:var(--panel);border-left:3px solid var(--c,var(--line2))}
 .feed li.big{font-weight:700}
 .ctrl{display:flex;flex-direction:column;gap:12px}
 .score-t td,.score-t th{padding:5px 6px;font-size:14px}
+.sb{display:flex;flex-direction:column;gap:8px}
+.sbgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:700px){.sbgrid{grid-template-columns:minmax(0,1fr)}}
+.sbt{background:var(--panel);min-width:0;overflow-x:auto}
+.sbh{display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 30%,var(--panel2)),var(--panel2));border-bottom:2px solid var(--c)}
+.sbh b{font:800 18px/1 var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sbs{font:900 26px/1 var(--display)}
+.sbt table{font-size:14px}
+.sbt th,.sbt td{padding:5px 8px}
+.sbt tr.dead td{opacity:.42}
+.sbt tfoot td{color:var(--dim);font-size:13px;border-bottom:0}
+.sbt .rl{display:inline-block;min-width:34px;margin-right:6px;font:500 10px/1 var(--mono);color:var(--dim);letter-spacing:.06em}
+.carry{color:var(--accent)}
 @media(max-width:560px){.lhead .t b{display:none}.lhead .crest.lg{min-width:54px;height:40px;font-size:19px}.mapbar .sc{font-size:28px}}
-@media(max-width:880px){.feed{min-height:0}.feed li:nth-child(n+5){display:none}}
+@media(max-width:880px){.feed{min-height:0}.feed li:nth-child(n+4){display:none}}
 </style>
 
 <div id="app" aria-live="polite"></div>
@@ -409,7 +423,7 @@ function vWeekPlan() {
       <p class="note">${esc(E.TRAINING[S.training].desc)}</p>
       <span class="lab">Tactique de base en match</span>
       <div class="chips">${Object.entries(E.TACTICS).map(([k, v]) => `<button class="chip" data-act="tac" data-v="${k}" aria-pressed="${S.tactic === k}">${v.label}</button>`).join("")}</div>
-      <p class="note">${{ agressif: "Fort en attaque : prise de colline, entrée sur les sites. Plus de duels, plus de fatigue.", equilibre: "Aucun point faible marqué.", prudent: "Fort en défense : tenir une colline, défendre un site. Moins de duels." }[S.tactic]}</p>
+      <p class="note">Hardpoint : ${esc(E.PLANS.HP[S.tactic].label)} · S&D : ${esc(E.PLANS.SND[S.tactic].label)} · Overload : ${esc(E.PLANS.OVL[S.tactic].label)}. Tu peux changer de plan avant chaque map et pendant le match.</p>
     </div></section>`;
 }
 function vInbox() {
@@ -732,34 +746,172 @@ document.addEventListener("input", e => {
 });
 
 /* ---------- Match en direct ---------- */
-const GS_PER_SEC = 4;
+const GS_PER_SEC = 4;          // secondes de jeu par seconde réelle, à vitesse x1
+const RUN = 5.5;               // vitesse de course en unités de carte par seconde de jeu
+const GW = 50, GH = 30, CS = 2; // grille de déplacement : 50 x 30 cases de 2 unités
 function seedRand(str) { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 10000) / 10000; }; }
-function layoutFor(map, mode) {
-  const r = seedRand(map);
-  const blocks = [];
-  for (let i = 0; i < 11; i++) { const w = 6 + r() * 12, h = 4 + r() * 10; blocks.push({ x: 14 + r() * (72 - w), y: 4 + r() * (52 - h), w, h }); }
-  const hills = [];
-  for (let i = 0; i < 5; i++) hills.push({ x: 26 + r() * 48, y: 10 + r() * 40 });
-  return { blocks, hills, sites: { A: { x: 50 + (r() - .5) * 14, y: 13 }, B: { x: 50 + (r() - .5) * 14, y: 47 } }, zones: [{ x: 38 + r() * 8, y: 18 + r() * 8 }, { x: 55 + r() * 8, y: 36 + r() * 8 }] };
+
+/* Plan de la carte : bâtiments inventés, grille de passage, objectifs placés sur des cases libres. */
+function buildGrid(blocks) {
+  const g = new Uint8Array(GW * GH);
+  for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
+    const x = cx * CS + 1, y = cy * CS + 1;
+    if (cx < 5 || cx > GW - 6) continue;
+    for (const b of blocks) if (x > b.x - 1.2 && x < b.x + b.w + 1.2 && y > b.y - 1.2 && y < b.y + b.h + 1.2) { g[cy * GW + cx] = 1; break; }
+  }
+  // Ne garde que les cases reliées au spawn de gauche.
+  const seen = new Uint8Array(GW * GH), q = [15 * GW + 1]; seen[q[0]] = 1;
+  while (q.length) { const c = q.pop(), cx = c % GW, cy = (c / GW) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue; const n = ny * GW + nx; if (!g[n] && !seen[n]) { seen[n] = 1; q.push(n); } } }
+  for (let i = 0; i < g.length; i++) if (!seen[i]) g[i] = 1;
+  return { g, ok: seen[15 * GW + GW - 2] === 1 };
 }
-function spawnPos(side, k) { return { x: side === 0 ? 5 + (k % 2) * 2.5 : 95 - (k % 2) * 2.5, y: 22 + k * 5.5 }; }
+const cellOf = (x, y) => [Math.max(0, Math.min(GW - 1, Math.floor(x / CS))), Math.max(0, Math.min(GH - 1, Math.floor(y / CS)))];
+function snap(lay, x, y) {
+  const [cx, cy] = cellOf(x, y);
+  for (let r = 0; r < 25; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    const nx = cx + dx, ny = cy + dy;
+    if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+    if (!lay.g[ny * GW + nx]) return { x: nx * CS + 1, y: ny * CS + 1 };
+  }
+  return { x: 50, y: 30 };
+}
+function los(lay, a, b) {
+  const d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.ceil(d / .7);
+  for (let i = 1; i < n; i++) { const [cx, cy] = cellOf(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n); if (lay.g[cy * GW + cx]) return false; }
+  return true;
+}
+function astar(lay, from, to) {
+  const [sx, sy] = cellOf(from.x, from.y), [tx, ty] = cellOf(to.x, to.y);
+  const S0 = sy * GW + sx, T0 = ty * GW + tx;
+  if (lay.g[T0]) return [to];
+  const gS = new Float32Array(GW * GH).fill(1e9), prev = new Int32Array(GW * GH).fill(-1), closed = new Uint8Array(GW * GH);
+  const open = [S0]; gS[S0] = 0;
+  const h = c => { const dx = Math.abs(c % GW - tx), dy = Math.abs(((c / GW) | 0) - ty); return Math.max(dx, dy) + .41 * Math.min(dx, dy); };
+  let guard = 0;
+  while (open.length && guard++ < 3000) {
+    let bi = 0; for (let i = 1; i < open.length; i++) if (gS[open[i]] + h(open[i]) < gS[open[bi]] + h(open[bi])) bi = i;
+    const c = open.splice(bi, 1)[0];
+    if (c === T0) break;
+    closed[c] = 1;
+    const cx = c % GW, cy = (c / GW) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+      const n = ny * GW + nx; if (lay.g[n] || closed[n]) continue;
+      if (dx && dy && (lay.g[cy * GW + nx] || lay.g[ny * GW + cx])) continue;
+      const ng = gS[c] + (dx && dy ? 1.41 : 1);
+      if (ng < gS[n]) { gS[n] = ng; prev[n] = c; if (!open.includes(n)) open.push(n); }
+    }
+  }
+  if (prev[T0] < 0 && T0 !== S0) return [to];
+  const pts = []; for (let c = T0; c !== S0 && c >= 0; c = prev[c]) pts.push({ x: (c % GW) * CS + 1, y: ((c / GW) | 0) * CS + 1 });
+  pts.reverse(); pts[pts.length - 1] = to;
+  // Lissage : on saute les points intermédiaires quand la ligne de vue est dégagée.
+  const out = []; let cur = from, i = 0;
+  while (i < pts.length) { let j = pts.length - 1; while (j > i && !los(lay, cur, pts[j])) j--; out.push(pts[j]); cur = pts[j]; i = j + 1; }
+  return out;
+}
+function layoutFor(map) {
+  const r = seedRand(map);
+  let blocks, grid, tries = 0;
+  do {
+    blocks = [];
+    for (let i = 0; i < 11; i++) { const w = 6 + r() * 12, h = 4 + r() * 10; blocks.push({ x: 14 + r() * (72 - w), y: 4 + r() * (52 - h), w, h }); }
+    grid = buildGrid(blocks);
+  } while (!grid.ok && ++tries < 8);
+  const lay = { blocks, g: grid.g };
+  lay.hills = []; for (let i = 0; i < 5; i++) lay.hills.push(snap(lay, 26 + r() * 48, 10 + r() * 40));
+  lay.sites = { A: snap(lay, 50 + (r() - .5) * 14, 13), B: snap(lay, 50 + (r() - .5) * 14, 47) };
+  lay.spawns = [[0, 1, 2, 3].map(k => snap(lay, 4 + (k % 2) * 3, 21 + k * 6)), [0, 1, 2, 3].map(k => snap(lay, 96 - (k % 2) * 3, 21 + k * 6))];
+  // Couloir de l'engin en Overload, d'un but à l'autre en contournant les bâtiments.
+  const lane = [{ x: 3, y: 30 }].concat(astar(lay, { x: 3, y: 30 }, { x: 97, y: 30 }));
+  const cum = [0]; for (let i = 1; i < lane.length; i++) cum.push(cum[i - 1] + Math.hypot(lane[i].x - lane[i - 1].x, lane[i].y - lane[i - 1].y));
+  lay.lane = lane; lay.laneCum = cum;
+  return lay;
+}
+function lanePoint(lay, x) {
+  const L = lay.laneCum[lay.laneCum.length - 1] * Math.max(0, Math.min(100, x)) / 100;
+  for (let i = 1; i < lay.lane.length; i++) if (lay.laneCum[i] >= L) { const a = lay.lane[i - 1], b = lay.lane[i], f = (L - lay.laneCum[i - 1]) / Math.max(.001, lay.laneCum[i] - lay.laneCum[i - 1]); return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }; }
+  return lay.lane[lay.lane.length - 1];
+}
+
+/* Rôles sur la carte : long (AR), entrée et flanc (SMG), soutien (Flex). */
+function assignSlots(sim) {
+  const slots = {};
+  sim.sides.forEach(s => {
+    const free = ["long", "entry", "flank", "support"];
+    const want = p => p.role === "AR" ? ["long", "support", "flank", "entry"] : p.role === "SMG" ? ["entry", "flank", "support", "long"] : ["support", "flank", "entry", "long"];
+    for (const p of s.players) { const sl = want(p).find(x => free.includes(x)); free.splice(free.indexOf(sl), 1); slots[p.id] = sl; }
+  });
+  return slots;
+}
 function initDots(L) {
-  const sim = L.sim; const dots = {};
-  sim.sides.forEach((s, si) => s.players.forEach((p, k) => { const sp = spawnPos(si, k); dots[p.id] = { x: sp.x, y: sp.y, tx: sp.x, ty: sp.y, side: si, k, alive: true, dx: 0, dy: 0, dt: 0 }; }));
+  const dots = {};
+  L.sim.sides.forEach((s, si) => s.players.forEach((p, k) => { const sp = L.layout.spawns[si][k]; dots[p.id] = { id: p.id, name: p.name, x: sp.x, y: sp.y, side: si, k, alive: true, path: [], goal: null, next: 0, key: "", dx: 0, dy: 0, dt: 0 }; }));
   return dots;
 }
-function objPoint(L, si) {
-  const sim = L.sim, lay = L.layout;
-  if (sim.mode === "HP") return lay.hills[sim.hill];
-  if (sim.mode === "SND") { const s = lay.sites[sim.site]; if (si === sim.att || sim.planted) return s; return R2() < .5 ? lay.sites.A : lay.sites.B; }
-  if (sim.holder < 0) return { x: sim.x, y: 30 };
-  return si === sim.holder ? { x: sim.x + (si === 0 ? 4 : -4), y: 30 } : { x: sim.x + (si === 0 ? -3 : 3), y: 30 };
+const add = (a, dx, dy) => ({ x: a.x + dx, y: a.y + (dy || 0) });
+function wantPos(L, d) {
+  const sim = L.sim, lay = L.layout, si = d.side, slot = L.slots[d.id], tac = sim.sides[si].tac;
+  const back = si === 0 ? -1 : 1;              // vers son propre spawn
+  if (sim.mode === "HP") {
+    const H = lay.hills[sim.hill], N = lay.hills[(sim.hill + 1) % 5];
+    const side = H.y < 30 ? 9 : -9;
+    if (sim.hillT >= 56) return [N, 5];
+    if (tac === "equilibre" && sim.hillT >= 45 && (slot === "flank" || slot === "support")) return [N, 4];
+    if (sim.rot > 0) return [slot === "long" ? add(H, back * 10) : H, 5];
+    if (sim.holder === si) {
+      const t = tac === "prudent" ? .7 : 1;
+      return { entry: [H, 3], support: [add(H, back * 4), 4], flank: [add(H, 0, side * t), 3], long: [add(H, back * 12 * t), 3] }[slot];
+    }
+    const near = tac === "agressif" ? .6 : tac === "prudent" ? 1.4 : 1;
+    return { entry: [H, 4], flank: [add(H, back * 3, side), 3], support: [add(H, back * 7 * near), 4], long: [add(H, back * 15 * near), 3] }[slot];
+  }
+  if (sim.mode === "SND") {
+    const site = lay.sites[sim.site], other = lay.sites[sim.site === "A" ? "B" : "A"];
+    const own = { x: si === 0 ? 8 : 92, y: 30 };
+    const approach = s => ({ x: own.x + (s.x - own.x) * .62, y: own.y + (s.y - own.y) * .62 });
+    if (si === sim.att) {
+      if (sim.planted) {
+        if (d.id === sim.planter) return [site, 1];
+        return { entry: [add(site, back * 6, 0), 3], flank: [add(site, -back * 4, site.y < 30 ? 8 : -8), 3], support: [add(site, back * 9, site.y < 30 ? 8 : -8), 3], long: [{ x: 50 + back * 16, y: 30 }, 4] }[slot];
+      }
+      const go = tac === "agressif" || sim.rt >= (tac === "prudent" ? Math.max(sim.first, 50) : sim.first + 4);
+      if (go) return [slot === "long" ? add(site, back * 12) : add(site, back * 2), slot === "entry" ? 2 : 4];
+      return { long: [{ x: 50 + back * 12, y: 30 }, 4], entry: [approach(site), 3], flank: [approach(other), 3], support: [add(approach(site), back * 4), 4] }[slot];
+    }
+    if (sim.planted) return [slot === "long" ? add(site, back * 12) : site, 6];
+    const deep = tac === "prudent" ? 6 : 0;
+    return { entry: [add(lay.sites.B, back * (4 + deep)), 3], support: [add(lay.sites.A, back * (4 + deep)), 3], flank: [{ x: 50 + back * (8 + deep), y: 30 }, 5], long: [{ x: 50 + back * (14 + deep), y: 30 }, 4] }[slot];
+  }
+  // Overload
+  const dev = lanePoint(lay, sim.x), fwd = -back;
+  if (sim.pause > 0) return [lay.spawns[si][d.k], 2];
+  if (sim.holder === si) {
+    if (tac === "agressif") return [add(dev, fwd * (slot === "long" ? 12 : 7)), 5];
+    if (tac === "prudent" && slot === "support") return [{ x: 50, y: 30 }, 5];
+    return { entry: [add(dev, -fwd * 3, 4), 2], support: [add(dev, -fwd * 3, -4), 2], flank: [add(dev, fwd * 6, 6), 4], long: [add(dev, fwd * 11), 3] }[slot];
+  }
+  if (sim.holder === 1 - si) return { entry: [dev, 2], flank: [add(dev, 0, 6), 3], support: [add(dev, back * 6), 4], long: [add(dev, back * 13), 3] }[slot];
+  return [slot === "long" ? add(dev, back * 10) : dev, 5];
 }
-const R2 = Math.random;
+function stateKey(sim) {
+  if (sim.mode === "HP") return `${sim.hill}|${sim.holder}|${sim.hillT >= 45}|${sim.hillT >= 56}|${sim.rot > 0}|${sim.sides[0].tac}${sim.sides[1].tac}`;
+  if (sim.mode === "SND") return `${sim.round}|${sim.planted}|${sim.rt >= sim.first + 4}|${sim.rt >= 50}|${sim.sides[0].tac}${sim.sides[1].tac}`;
+  return `${sim.holder}|${sim.carrier}|${sim.pause > 0}|${Math.round(sim.x / 4)}`;
+}
+function retarget(L, d) {
+  const [w, j] = wantPos(L, d);
+  const a = Math.random() * Math.PI * 2, rr = Math.random() * j;
+  const goal = snap(L.layout, w.x + Math.cos(a) * rr, w.y + Math.sin(a) * rr);
+  d.goal = goal; d.path = astar(L.layout, d, goal);
+}
+
 function startLive() {
   const pair = E.userPair(S); if (!pair) return;
   const ser = E.newSeries(S, pair.a, pair.b, pair.firstTo, pair.label);
-  ui.match = { ser, side: pair.a === S.userTeam ? 0 : 1, tac: S.tactic, speed: 3, paused: false, sim: null, phase: "map", dots: null, tracers: [], feed: [], evIdx: 0, acc: 0, last: 0, colors: sideColors(pair.a, pair.b) };
+  ui.match = { ser, side: pair.a === S.userTeam ? 0 : 1, tac: S.tactic, speed: 3, paused: false, sim: null, phase: "map", dots: null, tracers: [], feed: [], evIdx: 0, acc: 0, last: 0, sbT: 0, sbTab: "map", colors: sideColors(pair.a, pair.b) };
   nextMap();
   renderMatch();
   window.scrollTo({ top: 0 });
@@ -770,34 +922,45 @@ function nextMap() {
   const ids = [L.ser.a, L.ser.b];
   const tac = [0, 1].map(i => i === L.side ? L.tac : E.aiTactic(S, ids[i]));
   L.sim = E.createMapSim(S, m.mode, m.map, ids, tac);
-  L.layout = layoutFor(m.map, m.mode); L.dots = initDots(L); L.tracers = []; L.feed = []; L.evIdx = 0; L.phase = "map"; L.acc = 0;
+  L.layout = layoutFor(m.map); L.slots = assignSlots(L.sim); L.dots = initDots(L);
+  L.tracers = []; L.feed = []; L.evIdx = 0; L.phase = "map"; L.acc = 0; L.sbTab = "map";
 }
 function pumpEvents() {
   const L = ui.match, sim = L.sim;
   while (L.evIdx < sim.events.length) {
     const e = sim.events[L.evIdx++];
-    if (e.type === "kill") { const k = L.dots[e.killer], v = L.dots[e.victim]; if (k && v) L.tracers.push({ x1: k.x, y1: k.y, x2: v.x, y2: v.y, life: .45, side: e.side }); if (v) { v.dx = v.x; v.dy = v.y; v.dt = 1.4; } }
-    if (e.type === "round") for (const id in L.dots) { const d = L.dots[id]; const sp = spawnPos(d.side, d.k); d.x = d.tx = sp.x; d.y = d.ty = sp.y; }
+    if (e.type === "kill") {
+      const k = L.dots[e.killer], v = L.dots[e.victim];
+      if (k && v) { const dist = Math.hypot(k.x - v.x, k.y - v.y), f = Math.min(1, 14 / Math.max(1, dist)); L.tracers.push({ x1: v.x + (k.x - v.x) * f, y1: v.y + (k.y - v.y) * f, x2: v.x, y2: v.y, life: .5, side: e.side }); }
+      if (v) { v.dx = v.x; v.dy = v.y; v.dt = sim.mode === "SND" ? 999 : 1.6; }
+    }
+    if (e.type === "round") for (const id in L.dots) { const d = L.dots[id]; const sp = L.layout.spawns[d.side][d.k]; d.x = sp.x; d.y = sp.y; d.path = []; d.key = ""; d.dt = 0; }
     if (e.type !== "kill" || L.feed.length < 3 || Math.random() < .5) L.feed.unshift(e);
     if (L.feed.length > 9) L.feed.length = 9;
   }
 }
 function moveDots(dt) {
-  const L = ui.match, sim = L.sim;
-  const v = 9 * Math.min(L.speed, 4) * dt;
+  const L = ui.match, sim = L.sim, lay = L.layout;
+  const gdt = L.paused ? 0 : dt * GS_PER_SEC * L.speed;
+  const now = sim.t + L.acc, key = stateKey(sim);
+  const dev = sim.mode === "OVL" ? lanePoint(lay, sim.x) : null;
   sim.sides.forEach((s, si) => s.players.forEach(p => {
     const d = L.dots[p.id];
     if (!p.alive) { d.alive = false; return; }
-    if (!d.alive) { const sp = spawnPos(si, d.k); d.x = sp.x; d.y = sp.y; d.alive = true; d.tx = sp.x; d.ty = sp.y; }
-    const dist = Math.hypot(d.tx - d.x, d.ty - d.y);
-    if (dist < 1.2 || Math.random() < .01) {
-      const o = objPoint(L, si);
-      const hold = sim.mode === "HP" && sim.holder === si;
-      const j = hold ? 5 : 10;
-      const pull = hold || sim.mode !== "HP" ? 0 : (si === 0 ? -6 : 6);
-      d.tx = Math.max(2, Math.min(98, o.x + pull + (Math.random() - .5) * j * 2));
-      d.ty = Math.max(2, Math.min(58, o.y + (Math.random() - .5) * j * 2));
-    } else { d.x += (d.tx - d.x) / dist * Math.min(v, dist); d.y += (d.ty - d.y) / dist * Math.min(v, dist); }
+    if (!d.alive) { const sp = lay.spawns[si][d.k]; d.x = sp.x; d.y = sp.y; d.alive = true; d.path = []; d.key = ""; }
+    if (sim.mode === "OVL" && sim.carrier === p.id) {
+      // Le porteur suit l'engin sur son couloir.
+      const dist = Math.hypot(dev.x - d.x, dev.y - d.y), st = Math.min(dist, RUN * 2 * gdt + .001);
+      if (dist > 0) { d.x += (dev.x - d.x) / dist * st; d.y += (dev.y - d.y) / dist * st; }
+      d.path = []; return;
+    }
+    if (d.key !== key || now >= d.next || !d.goal) { retarget(L, d); d.key = key; d.next = now + 2 + Math.random() * 3; }
+    let budget = RUN * gdt;
+    while (budget > 0 && d.path.length) {
+      const t = d.path[0], dist = Math.hypot(t.x - d.x, t.y - d.y);
+      if (dist <= budget) { d.x = t.x; d.y = t.y; budget -= dist; d.path.shift(); }
+      else { d.x += (t.x - d.x) / dist * budget; d.y += (t.y - d.y) / dist * budget; budget = 0; }
+    }
   }));
   for (const t of L.tracers) t.life -= dt;
   L.tracers = L.tracers.filter(t => t.life > 0);
@@ -818,30 +981,52 @@ function draw() {
   const [ca, cb] = L.colors, col = i => i === 0 ? ca : cb;
   const sim = L.sim;
   g.font = `800 ${Math.max(11, W / 45)}px "Big Shoulders Display", Impact, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+  let devAt = null;
   if (sim.mode === "HP") {
-    L.layout.hills.forEach((h, i) => { g.strokeStyle = i === sim.hill ? "#eaf0f1" : "rgba(234,240,241,.12)"; g.setLineDash(i === sim.hill ? [] : [3, 4]); g.lineWidth = i === sim.hill ? 2 : 1; g.beginPath(); g.arc(h.x * sx, h.y * sy, 7 * sx, 0, 7); g.stroke(); });
+    L.layout.hills.forEach((h, i) => { g.strokeStyle = i === sim.hill ? "#eaf0f1" : "rgba(234,240,241,.12)"; g.setLineDash(i === sim.hill ? [] : [3, 4]); g.lineWidth = i === sim.hill ? 2 : 1; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.stroke(); });
     g.setLineDash([]);
     const h = L.layout.hills[sim.hill];
-    if (sim.holder >= 0) { g.fillStyle = col(sim.holder) + "40"; g.beginPath(); g.arc(h.x * sx, h.y * sy, 7 * sx, 0, 7); g.fill(); }
-    g.fillStyle = "#eaf0f1"; g.fillText(`P${sim.hill + 1}`, h.x * sx, (h.y - 9) * sy);
+    if (sim.holder >= 0) { g.fillStyle = col(sim.holder) + "40"; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.fill(); }
+    if (sim.hillT >= 50) { const n = L.layout.hills[(sim.hill + 1) % 5]; g.fillStyle = "rgba(234,240,241,.5)"; g.fillText(`P${(sim.hill + 1) % 5 + 1} dans ${60 - sim.hillT}s`, n.x * sx, (n.y + 8) * sy); }
+    g.fillStyle = "#eaf0f1"; g.fillText(`P${sim.hill + 1}`, h.x * sx, (h.y - 8) * sy);
   } else if (sim.mode === "SND") {
-    for (const k of ["A", "B"]) { const s = L.layout.sites[k]; const act = sim.planted && sim.site === k; g.strokeStyle = act ? "#ff7a6b" : "#8fa3aa"; g.lineWidth = act ? 2.5 : 1.5; g.strokeRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy); g.fillStyle = act ? "#ff7a6b" : "#8fa3aa"; g.fillText(k, s.x * sx, s.y * sy); }
-    if (sim.planted) { const s = L.layout.sites[sim.site]; const left = Math.max(0, 45 - (sim.rt - sim.plantT)); g.fillStyle = "#ff7a6b"; g.fillText(`${left}s`, s.x * sx, (s.y + 8) * sy); }
+    for (const k of ["A", "B"]) { const s = L.layout.sites[k]; const act = sim.planted && sim.site === k; g.strokeStyle = act ? "#ff7a6b" : "#8fa3aa"; g.lineWidth = act ? 2.5 : 1.5; g.strokeRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy); g.fillStyle = act ? "#ff7a6b" : "#8fa3aa"; g.fillText(k, (s.x - 7.5) * sx, s.y * sy); }
+    if (sim.planted) { const s = L.layout.sites[sim.site]; const left = Math.max(0, 45 - (sim.rt - sim.plantT)); g.fillStyle = "#ff7a6b"; g.beginPath(); g.arc(s.x * sx, s.y * sy, 4, 0, 7); g.fill(); g.fillText(`${left}s`, s.x * sx, (s.y + 8) * sy); }
   } else {
     for (const [gx, side] of [[2, 0], [98, 1]]) { g.fillStyle = col(side) + "33"; g.fillRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); g.strokeStyle = col(side); g.lineWidth = 2; g.strokeRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); }
-    const ex = sim.x * sx, ey = 30 * sy;
-    g.strokeStyle = "rgba(234,240,241,.18)"; g.setLineDash([4, 5]); g.lineWidth = 1; g.beginPath(); g.moveTo(4 * sx, ey); g.lineTo(96 * sx, ey); g.stroke(); g.setLineDash([]);
-    g.fillStyle = sim.holder >= 0 ? col(sim.holder) : "#eaf0f1"; g.strokeStyle = "#eaf0f1"; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(ex, ey - 7); g.lineTo(ex + 7, ey); g.lineTo(ex, ey + 7); g.lineTo(ex - 7, ey); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = "rgba(234,240,241,.14)"; g.setLineDash([4, 5]); g.lineWidth = 1; g.beginPath(); L.layout.lane.forEach((p, i) => i ? g.lineTo(p.x * sx, p.y * sy) : g.moveTo(p.x * sx, p.y * sy)); g.stroke(); g.setLineDash([]);
+    const cd = sim.carrier && L.dots[sim.carrier];
+    devAt = cd && cd.alive ? { x: cd.x, y: cd.y - 2.6 } : lanePoint(L.layout, sim.x);
   }
-  for (const t of L.tracers) { g.strokeStyle = col(t.side); g.globalAlpha = Math.min(1, t.life * 2.4); g.lineWidth = 1.6; g.beginPath(); g.moveTo(t.x1 * sx, t.y1 * sy); g.lineTo(t.x2 * sx, t.y2 * sy); g.stroke(); }
+  for (const t of L.tracers) { g.strokeStyle = col(t.side); g.globalAlpha = Math.min(1, t.life * 2.2); g.lineWidth = 1.6; g.beginPath(); g.moveTo(t.x1 * sx, t.y1 * sy); g.lineTo(t.x2 * sx, t.y2 * sy); g.stroke(); }
   g.globalAlpha = 1;
-  const r = Math.max(4, W / 115);
+  const r = Math.max(4, W / 120);
+  const small = W < 560;
+  const labels = [];
   for (const id in L.dots) {
     const d = L.dots[id];
-    if (!d.alive) { if (d.dt > 0) { g.strokeStyle = col(d.side); g.globalAlpha = Math.min(1, d.dt); g.lineWidth = 2; g.beginPath(); g.moveTo(d.dx * sx - r, d.dy * sy - r); g.lineTo(d.dx * sx + r, d.dy * sy + r); g.moveTo(d.dx * sx + r, d.dy * sy - r); g.lineTo(d.dx * sx - r, d.dy * sy + r); g.stroke(); g.globalAlpha = 1; } continue; }
+    if (!d.alive) { if (d.dt > 0) { g.strokeStyle = col(d.side); g.globalAlpha = Math.min(sim.mode === "SND" ? .7 : 1, d.dt); g.lineWidth = 2; g.beginPath(); g.moveTo(d.dx * sx - r, d.dy * sy - r); g.lineTo(d.dx * sx + r, d.dy * sy + r); g.moveTo(d.dx * sx + r, d.dy * sy - r); g.lineTo(d.dx * sx - r, d.dy * sy + r); g.stroke(); g.globalAlpha = 1; } continue; }
     g.fillStyle = col(d.side); g.beginPath(); g.arc(d.x * sx, d.y * sy, r, 0, 7); g.fill();
     g.strokeStyle = d.side === L.side ? "#eaf0f1" : "#0a1114"; g.lineWidth = 1.5; g.stroke();
+    labels.push(d);
+  }
+  // Noms des joueurs au-dessus de leur point
+  g.font = `600 ${small ? 9.5 : 11}px Barlow, "Segoe UI", sans-serif`; g.textBaseline = "bottom";
+  const placed = [];
+  labels.sort((a, b) => a.y - b.y);
+  for (const d of labels) {
+    const tx = d.x * sx, w = g.measureText(d.name).width + 8, hgt = small ? 13 : 15;
+    let ty = d.y * sy - r - 3;
+    for (let k = 0; k < 6; k++) { const hit = placed.find(q => Math.abs(q.x - tx) < (q.w + w) / 2 && Math.abs(q.y - ty) < hgt); if (!hit) break; ty = hit.y - hgt; }
+    placed.push({ x: tx, y: ty, w });
+    g.fillStyle = "rgba(10,17,20,.78)"; g.fillRect(tx - w / 2, ty - hgt + 1, w, hgt);
+    g.fillStyle = col(d.side); g.fillRect(tx - w / 2, ty, w, 1.5);
+    g.fillStyle = d.side === L.side ? "#eaf0f1" : "#b6c4c9"; g.fillText(d.name, tx, ty);
+  }
+  if (devAt) {
+    const ex = devAt.x * sx, ey = devAt.y * sy;
+    g.fillStyle = sim.holder >= 0 ? "#eaf0f1" : "#f5a524"; g.strokeStyle = "#0a1114"; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(ex, ey - 6); g.lineTo(ex + 6, ey); g.lineTo(ex, ey + 6); g.lineTo(ex - 6, ey); g.closePath(); g.fill(); g.stroke();
   }
 }
 function loop(ts) {
@@ -853,8 +1038,9 @@ function loop(ts) {
     pumpEvents();
     moveDots(dt);
     if (L.sim.done) endMap();
-    updateLive();
+    else updateLive();
   } else if (L.phase === "map") moveDots(0);
+  if (L.phase === "map" && ts - L.sbT > 300) { L.sbT = ts; const sb = $("#sb"); if (sb) sb.innerHTML = scoreboard(); }
   draw();
   requestAnimationFrame(loop);
 }
@@ -877,44 +1063,73 @@ function updateLive() {
   $("#mtime").textContent = timeStr(sim);
   let extra = "";
   if (sim.mode === "SND") extra = `Attaque : ${esc(T(sim.sides[sim.att].id).tag)} · en vie ${E.aliveOf(sim.sides[0]).length}v${E.aliveOf(sim.sides[1]).length}`;
-  if (sim.mode === "OVL") extra = sim.holder >= 0 ? `Engin porté par ${esc(T(sim.sides[sim.holder].id).tag)}` : "Engin au sol";
+  if (sim.mode === "OVL") { const c = sim.carrier && sim.sides[sim.holder] && sim.sides[sim.holder].players.find(p => p.id === sim.carrier); extra = c ? `Engin porté par ${esc(c.name)} (${esc(T(sim.sides[sim.holder].id).tag)})` : "Engin au sol"; }
   if (sim.mode === "HP") extra = sim.holder >= 0 ? `Colline tenue par ${esc(T(sim.sides[sim.holder].id).tag)}` : "Colline libre";
   $("#mextra").textContent = extra;
   const [ca, cb] = L.colors;
   $("#feed").innerHTML = L.feed.map(e => `<li class="${e.type === "big" || e.type === "round" || e.type === "end" ? "big" : ""}" style="--c:${e.side === 0 ? ca : e.side === 1 ? cb : "var(--line2)"}">${esc(e.text)}</li>`).join("");
   const to = $("#mto"); if (to) { const left = 2 - sim.sides[me].timeouts; to.textContent = `Temps mort (${left})`; to.disabled = left <= 0; }
 }
-function scoreboard(sim) {
-  return `<div class="tw"><table class="score-t"><thead><tr><th>Joueur</th><th class="n">K</th><th class="n">D</th><th class="n">+/-</th></tr></thead><tbody>${sim.sides.map((s, i) => s.players.slice().sort((a, b) => b.k - a.k).map(p => `<tr class="${i === ui.match.side ? "me" : ""}"><td>${esc(T(s.id).tag)} · ${esc(p.name)}</td><td class="n">${p.k}</td><td class="n">${p.d}</td><td class="n ${p.k >= p.d ? "win" : "loss"}">${p.k - p.d > 0 ? "+" : ""}${p.k - p.d}</td></tr>`).join("")).join("")}</tbody></table></div>`;
+/* Tableau des scores : K, D, +/-, K/D et objectif du mode, pour la map ou toute la série. */
+const OBJ_LABEL = { HP: "Colline", SND: "Bombe", OVL: "Buts" };
+function scoreboard() {
+  const L = ui.match, sim = L.sim, ser = L.ser, tabMap = L.sbTab === "map";
+  const [ca, cb] = L.colors;
+  const fmtObj = v => sim.mode === "HP" ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}` : String(v);
+  const block = (s, i) => {
+    let rows = s.players.map(p => {
+      if (tabMap) return { p, k: p.k, d: p.d, obj: p.obj };
+      const st = ser.stats[p.id] || { k: 0, d: 0 };
+      const live = L.phase === "map" ? p : { k: 0, d: 0 };
+      return { p, k: st.k + live.k, d: st.d + live.d };
+    });
+    rows.sort((a, b) => (b.k - b.d) - (a.k - a.d) || b.k - a.k);
+    const c = i === 0 ? ca : cb;
+    const total = rows.reduce((t, r) => [t[0] + r.k, t[1] + r.d], [0, 0]);
+    return `<div class="sbt" style="--c:${c}">
+      <div class="sbh">${crest(s.id, "sm")}<b>${esc(T(s.id).name)}</b><span class="spacer"></span><span class="sbs">${tabMap ? sim.score[i] : ser.wins[i]}</span></div>
+      <table><thead><tr><th>Joueur</th><th class="n">K</th><th class="n">D</th><th class="n">+/-</th><th class="n">K/D</th>${tabMap ? `<th class="n">${OBJ_LABEL[sim.mode]}</th>` : ""}</tr></thead>
+      <tbody>${rows.map(r => {
+        const dead = tabMap && L.phase === "map" && !r.p.alive;
+        const tagx = sim.mode === "OVL" && sim.carrier === r.p.id ? ' <span class="carry" title="Porte l\'engin">◆</span>' : sim.mode === "SND" && sim.planter === r.p.id && sim.planted ? ' <span class="carry" title="A posé la bombe">●</span>' : "";
+        return `<tr class="${i === L.side ? "me" : ""} ${dead ? "dead" : ""}"><td><span class="rl">${esc(r.p.role)}</span>${esc(r.p.name)}${tagx}</td><td class="n">${r.k}</td><td class="n">${r.d}</td><td class="n ${r.k - r.d >= 0 ? "win" : "loss"}">${r.k - r.d > 0 ? "+" : ""}${r.k - r.d}</td><td class="n">${kd(r.k, r.d)}</td>${tabMap ? `<td class="n">${fmtObj(r.obj)}</td>` : ""}</tr>`;
+      }).join("")}</tbody>
+      <tfoot><tr><td>Équipe</td><td class="n">${total[0]}</td><td class="n">${total[1]}</td><td class="n">${total[0] - total[1] > 0 ? "+" : ""}${total[0] - total[1]}</td><td class="n">${kd(total[0], total[1])}</td>${tabMap ? "<td></td>" : ""}</tr></tfoot></table>
+    </div>`;
+  };
+  return `<div class="rowx"><span class="lab">Tableau des scores</span><span class="spacer"></span><div class="chips"><button class="chip" data-act="sbtab" data-v="map" aria-pressed="${tabMap}">Cette map</button><button class="chip" data-act="sbtab" data-v="ser" aria-pressed="${!tabMap}">Série</button></div></div>
+    <div class="sbgrid">${sim.sides.map(block).join("")}</div>`;
+}
+function planChips(mode, cur, act) {
+  return `<div class="chips">${Object.keys(E.TACTICS).map(k => `<button class="chip" data-act="${act}" data-v="${k}" aria-pressed="${cur === k}">${E.PLANS[mode][k].label}</button>`).join("")}</div><p class="note">${esc(E.PLANS[mode][cur].desc)}</p>`;
 }
 function renderMatch() {
   const L = ui.match, ser = L.ser, sim = L.sim, me = L.side;
-  const plan = ser.plan[ser.maps.length - (L.phase === "map" ? 0 : 1)] || ser.plan[ser.maps.length - 1];
   const [ca, cb] = L.colors;
   let ctrl = "";
   if (L.phase === "map") {
     ctrl = `<div class="panel ctrl">
       <span class="lab">Vitesse</span>
       <div class="chips">${[1, 3, 8].map(v => `<button class="chip" data-act="spd" data-v="${v}" aria-pressed="${L.speed === v && !L.paused}">x${v}</button>`).join("")}<button class="chip" data-act="pause" aria-pressed="${L.paused}">${L.paused ? "Reprendre" : "Pause"}</button></div>
-      <span class="lab">Tactique en direct</span>
-      <div class="chips">${Object.entries(E.TACTICS).map(([k, v]) => `<button class="chip" data-act="ltac" data-v="${k}" aria-pressed="${sim.sides[me].tac === k}">${v.label}</button>`).join("")}</div>
+      <span class="lab">Plan de jeu · ${E.MODES[sim.mode]}</span>
+      ${planChips(sim.mode, sim.sides[me].tac, "ltac")}
       <div class="rowx"><button class="btn sm ghost" id="mto" data-act="timeout">Temps mort</button><button class="btn sm ghost" data-act="skipmap">Finir la map</button></div>
       <p class="note">Le temps mort casse la dynamique adverse. Deux par map.</p>
     </div>`;
   } else {
-    const won = ser.maps[ser.maps.length - 1].winner === me;
     const last = ser.maps[ser.maps.length - 1];
+    const won = last.winner === me;
     if (L.phase === "between") {
       const nx = ser.plan[ser.maps.length];
       ctrl = `<div class="panel ctrl"><span class="lab">Map ${ser.maps.length} terminée</span><h2 class="${won ? "win" : "loss"}">${won ? "Map gagnée" : "Map perdue"} ${last.score[me]}-${last.score[1 - me]}</h2>
         <span class="lab">Prochaine map : ${E.MODES[nx.mode]} · ${esc(nx.map)}</span>
-        <span class="lab">Tactique pour la prochaine map</span>
-        <div class="chips">${Object.entries(E.TACTICS).map(([k, v]) => `<button class="chip" data-act="ntac" data-v="${k}" aria-pressed="${L.tac === k}">${v.label}</button>`).join("")}</div>
+        <span class="lab">Plan de jeu pour cette map</span>
+        ${planChips(nx.mode, L.tac, "ntac")}
         <div class="rowx"><button class="btn" data-act="nextmap">Map suivante</button><button class="link" data-act="simrest">Simuler la fin de la série</button></div></div>`;
     } else {
       const sw = ser.winner === S.userTeam;
       ctrl = `<div class="panel ctrl"><span class="lab">Série terminée</span><h2 class="${sw ? "win" : "loss"}">${sw ? "Victoire" : "Défaite"} ${ser.wins[me]}-${ser.wins[1 - me]}</h2>
-        <div class="maps">${ser.maps.map(m => `<div class="mapc ${m.winner === me ? "w" : "l"}"><span class="lab">${m.mode}</span><b>${m.score[me]}-${m.score[1 - me]}</b><span>${esc(m.map)}</span></div>`).join("")}</div>
+        <div class="maps">${ser.maps.map(m => `<div class="mapc ${m.winner === me ? "w" : "l"}"><span class="lab">${E.MODES[m.mode]}</span><b>${m.score[me]}-${m.score[1 - me]}</b><span>${esc(m.map)}</span></div>`).join("")}</div>
         <div><button class="btn" data-act="leave">Retour au QG</button></div></div>`;
     }
   }
@@ -927,9 +1142,10 @@ function renderMatch() {
     </div>
     <div class="mapbar"><div><span class="lab">Map ${ser.maps.length + (L.phase === "map" ? 1 : 0)} · ${E.MODES[sim.mode]}</span><br><b style="font:800 22px/1 var(--display)">${esc(sim.map)}</b></div><div><span class="lab" id="mtime"></span><br><span class="note" id="mextra"></span></div><div class="sc" id="msc"></div></div>
     <div class="lgrid">
-      <div class="stack"><canvas id="arena" class="arena" aria-label="Mini-carte du match"></canvas>
-        <ul class="feed" id="feed" aria-live="off"></ul></div>
-      <div class="stack">${ctrl}${L.phase !== "map" ? scoreboard(sim) : ""}</div>
+      <canvas id="arena" class="arena" aria-label="Mini-carte du match"></canvas>
+      <div class="lctrl">${ctrl}</div>
+      <section class="sb" id="sb">${scoreboard()}</section>
+      <ul class="feed" id="feed" aria-live="off"></ul>
     </div>
   </div>`;
   updateLive();
@@ -938,8 +1154,9 @@ function renderMatch() {
 const LIVE = {
   spd: el => { ui.match.speed = +el.dataset.v; ui.match.paused = false; renderMatch(); },
   pause: () => { ui.match.paused = !ui.match.paused; renderMatch(); },
-  ltac: el => { E.setTactic(ui.match.sim, ui.match.side, el.dataset.v); ui.match.tac = el.dataset.v; renderMatch(); },
+  ltac: el => { E.setTactic(ui.match.sim, ui.match.side, el.dataset.v); ui.match.tac = el.dataset.v; pumpEvents(); renderMatch(); },
   ntac: el => { ui.match.tac = el.dataset.v; renderMatch(); },
+  sbtab: el => { ui.match.sbTab = el.dataset.v; $("#sb").innerHTML = scoreboard(); },
   timeout: () => { if (E.timeout(ui.match.sim, ui.match.side)) { pumpEvents(); updateLive(); } },
   skipmap: () => { const L = ui.match; E.runMap(L.sim); L.feed = []; L.evIdx = Math.max(0, L.sim.events.length - 9); pumpEvents(); endMap(); },
   nextmap: () => { nextMap(); renderMatch(); },

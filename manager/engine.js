@@ -225,13 +225,31 @@ function roleCheck(S, tid) {
 }
 
 /* ---------- Simulation d'une map (pas à pas, partagée par le direct et l'instantané) ---------- */
+// Noms des plans de jeu selon le mode. Les trois réglages restent agressif / équilibré / prudent.
+const PLANS = {
+  HP: {
+    agressif: { label: "Casser la colline", desc: "Les SMG foncent sur la colline adverse. Fort pour reprendre la zone, plus de duels." },
+    equilibre: { label: "Rotations anticipées", desc: "Deux joueurs partent tôt vers la colline suivante. Avantage au moment où la zone tourne." },
+    prudent: { label: "Tenir les spawns", desc: "On s'installe autour de la colline tenue. Très solide en défense, lent pour reprendre." },
+  },
+  SND: {
+    agressif: { label: "Rush sur un site", desc: "Les quatre entrent ensemble sur le site très tôt. Pression maximale, peu d'informations." },
+    equilibre: { label: "Jeu par défaut", desc: "Les joueurs se répartissent sur la carte pour prendre des infos avant de converger." },
+    prudent: { label: "Jeu lent", desc: "On joue la montre en défense, on attaque tard. Fort en défense et en retake." },
+  },
+  OVL: {
+    agressif: { label: "Push direct", desc: "Le porteur fonce vers le but, toute l'équipe pousse devant. Rapide mais exposé." },
+    equilibre: { label: "Escorte de l'engin", desc: "Deux joueurs protègent le porteur. Le porteur meurt moins souvent." },
+    prudent: { label: "Contrôle du milieu", desc: "On tient le centre et on défend son but. Fort en défense." },
+  },
+};
 function aiTactic(S, tid) { return wpick(Object.keys(TACTICS), k => k === "equilibre" ? 3 : 1.4); }
 function createMapSim(S, mode, mapName, ids, tactics) {
   const side = i => {
     const ps = starters(S, ids[i]);
     return {
       id: ids[i], tag: S.teams[ids[i]].tag, rating: teamRating(S, ids[i]) + gauss() * 3.2, tac: tactics[i],
-      players: ps.map(p => ({ id: p.id, name: p.name, role: p.role, r: effRating(p), dead: 0, k: 0, d: 0, alive: true })),
+      players: ps.map(p => ({ id: p.id, name: p.name, role: p.role, r: effRating(p), dead: 0, k: 0, d: 0, obj: 0, alive: true })),
       timeouts: 0,
     };
   };
@@ -240,14 +258,14 @@ function createMapSim(S, mode, mapName, ids, tactics) {
     score: [0, 0], mom: [0, 0], events: [], seq: 0,
   };
   if (mode === "HP") Object.assign(sim, { hill: 0, hillT: 0, holder: -1, rot: 6, limit: 900 });
-  if (mode === "SND") Object.assign(sim, { round: 0, att: R() < .5 ? 0 : 1, rt: 0, planted: false, plantT: 0, site: "A", first: ri(14, 30), target: 6 });
-  if (mode === "OVL") Object.assign(sim, { x: 50, holder: -1, pause: 6, target: 8, limit: 600 });
+  if (mode === "SND") Object.assign(sim, { round: 0, att: R() < .5 ? 0 : 1, rt: 0, planted: false, plantT: 0, site: "A", first: ri(14, 30), target: 6, planter: null, fb: false });
+  if (mode === "OVL") Object.assign(sim, { x: 50, holder: -1, carrier: null, pause: 6, target: 8, limit: 600 });
   if (mode === "SND") resetRound(sim);
   return sim;
 }
 function ev(sim, type, text, extra) { sim.events.push(Object.assign({ n: sim.seq++, t: sim.t, type, text }, extra || {})); }
 function aliveOf(s) { return s.players.filter(p => p.alive); }
-function setTactic(sim, i, tac) { sim.sides[i].tac = tac; }
+function setTactic(sim, i, tac) { sim.sides[i].tac = tac; ev(sim, "info", `${sim.sides[i].tag} passe en « ${PLANS[sim.mode][tac].label} ».`, { side: i }); }
 function timeout(sim, i) {
   const s = sim.sides[i]; if (s.timeouts >= 2) return false;
   s.timeouts++; sim.mom[i] = .8; sim.mom[1 - i] = 0;
@@ -264,24 +282,33 @@ function fight(sim, defSide) {
   const A = sim.sides[0], B = sim.sides[1];
   const aA = aliveOf(A), aB = aliveOf(B);
   if (!aA.length || !aB.length) return -1;
-  const mod = i => { const t = TACTICS[sim.sides[i].tac]; return defSide === i ? t.def : t.att; };
+  const mod = i => {
+    const tac = sim.sides[i].tac, t = TACTICS[tac];
+    let m = defSide === i ? t.def : t.att;
+    // Rotation anticipée : avantage quand la colline vient de tourner.
+    if (sim.mode === "HP" && sim.holder < 0 && tac === "equilibre") m += 1.6;
+    return m;
+  };
   let d = (A.rating - B.rating) + (sim.mom[0] - sim.mom[1]) + mod(0) - mod(1);
   if (sim.mode === "SND") d += (aA.length - aB.length) * 5;
   const pA = sig(d / 19);
   const w = R() < pA ? 0 : 1, l = 1 - w;
   const W = sim.sides[w], L = sim.sides[l];
   let n = 1 + (R() < .33 ? 1 : 0) + (R() < .12 ? 1 : 0);
-  if (sim.sides[w].tac === "agressif" || sim.sides[l].tac === "agressif") n += R() < .2 ? 1 : 0;
+  if (W.tac === "agressif" || L.tac === "agressif") n += R() < .2 ? 1 : 0;
   const killer = wpick(aliveOf(W), p => killerWeight(sim, p));
   let kills = 0;
   for (let i = 0; i < n; i++) {
     const vs = aliveOf(L); if (!vs.length) break;
-    const v = pick(vs);
+    // En Overload, le porteur est souvent la cible ; l'escorte le protège.
+    let v = pick(vs);
+    const car = vs.find(p => p.id === sim.carrier);
+    if (car && v !== car && R() < (L.tac === "equilibre" ? .15 : L.tac === "agressif" ? .45 : .3)) v = car;
     kill(sim, killer, v, w);
     kills++;
   }
   // Échange : le perdant tue parfois un adversaire.
-  if (R() < .26 && aliveOf(L).length && aliveOf(W).length > (sim.mode === "SND" ? 0 : 0)) {
+  if (R() < .26 && aliveOf(L).length && aliveOf(W).length) {
     const k2 = wpick(aliveOf(L), p => killerWeight(sim, p));
     const v2 = pick(aliveOf(W));
     if (v2) kill(sim, k2, v2, l);
@@ -294,6 +321,11 @@ function fight(sim, defSide) {
 function kill(sim, k, v, ws) {
   k.k++; v.d++; v.alive = false; v.dead = sim.t;
   ev(sim, "kill", `${k.name} élimine ${v.name}`, { side: ws, killer: k.id, victim: v.id });
+  if (sim.mode === "SND" && !sim.fb) { sim.fb = true; ev(sim, "obj", `Premier sang pour ${k.name}.`, { side: ws }); }
+  if (sim.mode === "OVL" && v.id === sim.carrier) {
+    sim.carrier = null; sim.holder = -1;
+    ev(sim, "obj", `${v.name} tombe avec l'engin !`, { side: ws });
+  }
 }
 function respawn(sim) {
   for (const s of sim.sides) for (const p of s.players) if (!p.alive && sim.t - p.dead >= 4) p.alive = true;
@@ -301,7 +333,11 @@ function respawn(sim) {
 function resetRound(sim) {
   for (const s of sim.sides) for (const p of s.players) { p.alive = true; }
   sim.rt = 0;
-  if (sim.mode === "SND") { sim.planted = false; sim.plantT = 0; sim.site = R() < .5 ? "A" : "B"; sim.first = ri(12, 30); }
+  if (sim.mode === "SND") {
+    sim.planted = false; sim.plantT = 0; sim.site = R() < .5 ? "A" : "B"; sim.planter = null; sim.fb = false;
+    const tac = sim.sides[sim.att].tac;
+    sim.first = tac === "agressif" ? ri(9, 18) : tac === "prudent" ? ri(22, 38) : ri(14, 28);
+  }
 }
 function rate(sim, base, i) { return base * TACTICS[sim.sides[i].tac].rate; }
 function stepMap(sim) {
@@ -319,6 +355,7 @@ function finishMap(sim, w) {
 function stepHP(sim) {
   respawn(sim);
   sim.hillT++;
+  if (sim.hillT === 45) for (const i of [0, 1]) if (sim.sides[i].tac === "equilibre" && R() < .5) ev(sim, "info", `${sim.sides[i].tag} envoie deux joueurs en avance vers la colline ${(sim.hill + 1) % 5 + 1}.`, { side: i });
   if (sim.hillT >= 60) {
     sim.hillT = 0; sim.hill = (sim.hill + 1) % 5; sim.holder = -1; sim.rot = 7;
     ev(sim, "obj", `La zone tourne : colline ${sim.hill + 1}.`);
@@ -332,25 +369,41 @@ function stepHP(sim) {
       sim.holder = w;
     }
   }
-  if (sim.holder >= 0 && aliveOf(sim.sides[sim.holder]).length) {
-    sim.score[sim.holder]++;
-    if (sim.score[sim.holder] >= 250) return finishMap(sim, sim.holder);
+  if (sim.holder >= 0) {
+    const on = aliveOf(sim.sides[sim.holder]);
+    if (on.length) {
+      sim.score[sim.holder]++;
+      for (const p of on) p.obj++;
+      if (sim.score[sim.holder] >= 250) return finishMap(sim, sim.holder);
+    }
   }
   if (sim.t >= sim.limit) finishMap(sim, sim.score[0] >= sim.score[1] ? 0 : 1);
 }
 function stepSND(sim) {
   sim.rt++;
   const att = sim.att, def = 1 - att;
-  const aA = aliveOf(sim.sides[att]).length, aD = aliveOf(sim.sides[def]).length;
-  if (!sim.planted && aA > 0 && sim.rt > 38 && R() < .07 + (aA - aD) * .02) {
+  const A = sim.sides[att], Dd = sim.sides[def];
+  if (sim.rt === 1) {
+    const plan = { agressif: `rush direct sur ${sim.site}`, equilibre: "se répartit sur la carte", prudent: "joue lentement" }[A.tac];
+    ev(sim, "info", `Manche ${sim.round + 1} · ${A.tag} attaque et ${plan}.`, { side: att });
+  }
+  const aA = aliveOf(A).length, aD = aliveOf(Dd).length;
+  const plantFrom = A.tac === "agressif" ? 22 : A.tac === "prudent" ? 55 : 38;
+  if (!sim.planted && aA > 0 && sim.rt > plantFrom && R() < .07 + (aA - aD) * .02) {
     sim.planted = true; sim.plantT = sim.rt;
-    ev(sim, "obj", `Bombe posée sur ${sim.site} par ${sim.sides[att].tag}.`, { side: att });
+    const pl = wpick(aliveOf(A), p => p.role === "SMG" ? 2 : 1);
+    pl.obj++; sim.planter = pl.id;
+    ev(sim, "obj", `${pl.name} pose la bombe sur ${sim.site}.`, { side: att });
   }
   if (sim.rt >= sim.first && R() < rate(sim, .16, att)) fight(sim, sim.planted ? att : def);
-  const nA = aliveOf(sim.sides[att]).length, nD = aliveOf(sim.sides[def]).length;
+  const nA = aliveOf(A).length, nD = aliveOf(Dd).length;
   let w = -1, why = "";
   if (nD === 0) { w = att; why = "élimine toute l'équipe adverse"; }
-  else if (nA === 0) { w = def; why = sim.planted ? "désamorce la bombe" : "élimine toute l'équipe adverse"; }
+  else if (nA === 0) {
+    w = def;
+    if (sim.planted) { const df = pick(aliveOf(Dd)); df.obj++; why = `${df.name} désamorce la bombe`; }
+    else why = "élimine toute l'équipe adverse";
+  }
   else if (sim.planted && sim.rt - sim.plantT >= 45) { w = att; why = "fait exploser la bombe"; }
   else if (!sim.planted && sim.rt >= 100) { w = def; why = "tient jusqu'à la fin du temps"; }
   if (w >= 0) {
@@ -365,23 +418,26 @@ function stepOVL(sim) {
   // x va de 0 (but de l'équipe 0, à gauche) à 100 (but de l'équipe 1, à droite).
   respawn(sim);
   if (sim.pause > 0) { sim.pause--; return; }
-  if (sim.holder >= 0 && !aliveOf(sim.sides[sim.holder]).length) { sim.holder = -1; ev(sim, "obj", "L'engin tombe au sol."); }
   const def = sim.holder < 0 ? -1 : 1 - sim.holder;
   if (R() < (sim.holder < 0 ? .3 : rate(sim, .15, def))) {
     const w = fight(sim, def);
     if (w >= 0 && w !== sim.holder && aliveOf(sim.sides[w]).length) {
-      ev(sim, "obj", sim.holder < 0 ? `${sim.sides[w].tag} récupère l'engin.` : `${sim.sides[w].tag} reprend l'engin !`, { side: w });
-      sim.holder = w;
+      const c = wpick(aliveOf(sim.sides[w]), p => p.role === "SMG" ? 2 : p.role === "Flex" ? 1.5 : 1);
+      ev(sim, "obj", sim.holder < 0 ? `${c.name} (${sim.sides[w].tag}) récupère l'engin.` : `${c.name} reprend l'engin pour ${sim.sides[w].tag} !`, { side: w });
+      sim.holder = w; sim.carrier = c.id;
     }
   }
-  if (sim.holder >= 0) {
-    sim.x += sim.holder === 0 ? 2.4 : -2.4;
+  if (sim.holder >= 0 && sim.carrier) {
+    const sp = { agressif: 3.1, equilibre: 2.3, prudent: 2.0 }[sim.sides[sim.holder].tac];
+    sim.x += sim.holder === 0 ? sp : -sp;
     if (sim.x >= 100 || sim.x <= 0) {
       const w = sim.holder;
+      const c = sim.sides[w].players.find(p => p.id === sim.carrier);
+      if (c) c.obj++;
       sim.score[w]++;
-      ev(sim, "round", `BUT pour ${sim.sides[w].tag} ! ${sim.score[0]}-${sim.score[1]}.`, { side: w });
+      ev(sim, "round", `BUT de ${c ? c.name : sim.sides[w].tag} pour ${sim.sides[w].tag} ! ${sim.score[0]}-${sim.score[1]}.`, { side: w });
       if (sim.score[w] >= sim.target) return finishMap(sim, w);
-      sim.x = 50; sim.holder = -1; sim.pause = 6;
+      sim.x = 50; sim.holder = -1; sim.carrier = null; sim.pause = 6;
       for (const sd of sim.sides) for (const p of sd.players) p.alive = true;
     }
   }
@@ -409,8 +465,9 @@ function recordMap(S, ser, sim) {
   ser.maps.push({ mode: sim.mode, map: sim.map, score: sim.score.slice(), winner: sim.winner });
   ser.wins[sim.winner]++;
   for (const s of sim.sides) for (const p of s.players) {
-    const st = ser.stats[p.id] || (ser.stats[p.id] = { k: 0, d: 0, maps: 0 });
+    const st = ser.stats[p.id] || (ser.stats[p.id] = { k: 0, d: 0, maps: 0, obj: {} });
     st.k += p.k; st.d += p.d; st.maps++;
+    st.obj = st.obj || {}; st.obj[sim.mode] = (st.obj[sim.mode] || 0) + p.obj;
   }
   if (ser.wins[sim.winner] >= ser.firstTo) { ser.done = true; ser.winner = sim.winner === 0 ? ser.a : ser.b; }
 }
@@ -971,7 +1028,7 @@ const API = {
   setData, newGame, advance, nextSeason, userPair, newSeries, recordMap, createMapSim, stepMap, runMap, setTactic, timeout, aiTactic,
   teamRating, effRating, starters, roleCheck, ovr, pOvr, salaryDemand, marketValue, askingFee, interest, makeOffer, negotiate, release, releaseCost,
   setRole, swapStarter, moveInRoster, marketList, qualTable, pointsTable, weeklyIncome, payroll, answer, pendingChoices, fmtMoney, flag,
-  ROLES, MODES, TACTICS, TRAINING, WEEKS_PER_SEASON, aliveOf,
+  ROLES, MODES, TACTICS, PLANS, TRAINING, WEEKS_PER_SEASON, aliveOf,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = API; else root.ENGINE = API;
 })(typeof window !== "undefined" ? window : globalThis);
