@@ -1,0 +1,7 @@
+{
+ "id": "rugby-destiny",
+ "nom": "Rugby Destiny",
+ "nomCourt": "Rugby Destiny",
+ "description": "Jeu de carrière de rugby, de la Fédérale au titre. Clubs et joueurs fictifs.",
+ "couleurs": { "fond": "#0f1712", "accent": "#e8b23a", "accentTexte": "#1a1303" }
+}

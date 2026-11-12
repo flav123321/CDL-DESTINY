@@ -1,0 +1,4 @@
+node_modules/
+app/.expo/
+app/src/gameHtml.ts
+jeux/*/dist/

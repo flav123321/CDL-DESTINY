@@ -1,0 +1,1664 @@
+{
+ "schema": 1,
+ "revision": 1,
+ "minEngine": 1,
+ "updatedAt": "2026-11-12",
+ "notes": "Première version du jeu d'essai.",
+ "labels": {
+  "game": "Rugby Destiny",
+  "startYear": 2027,
+  "currency": "€",
+  "top": "Élite",
+  "second": "Fédérale",
+  "topThe": "l'Élite",
+  "eventsTop": [
+   "Coupe d'automne",
+   "Coupe d'hiver",
+   "Coupe de printemps",
+   "Coupe d'été"
+  ],
+  "eventsSecond": [
+   "Challenge d'automne",
+   "Challenge d'hiver",
+   "Challenge de printemps",
+   "Challenge d'été"
+  ],
+  "finalTop": "Grande finale",
+  "finalSecond": "Finale Fédérale",
+  "finalTopThe": "la grande finale",
+  "finalSecondThe": "la finale Fédérale",
+  "finalShort": "Titres",
+  "eventShort": "Coupes",
+  "finalTitles": "Titres de champion",
+  "eventsWon": "Coupes gagnées",
+  "perf": "Impact",
+  "stats": {
+   "aim": "Puissance",
+   "move": "Vitesse",
+   "sense": "Lecture du jeu",
+   "mental": "Mental"
+  },
+  "steps": {
+   "prep": "Présaison",
+   "off": "Vie perso",
+   "train": "Entraînement",
+   "merc": "Mercato"
+  },
+  "moneyLabel": "Gains",
+  "generatedTag": "",
+  "nameLabel": "Ton nom",
+  "roleLabel": "Ton poste",
+  "originLabel": "Ton parcours",
+  "starterLabel": "Ton club de départ",
+  "clutchTag": "dans le feu du match",
+  "qualShort": "poules",
+  "newsTitle": "Mercato",
+  "signLine": "Direction l'Élite.",
+  "homeEmpty": "Écris ta première carrière, de la Fédérale au titre de champion.",
+  "createIntro": "Tu débutes en Fédérale à 18 ans. Chaque saison tient en dix décisions maximum, et ton choix de club dépend de ce que tu as montré. Jusqu'où tu montes ?",
+  "teamsNote": "Clubs, joueurs et notes sont inventés pour le jeu.",
+  "disclaimerHome": "Jeu d'essai créé avec le modèle de CDL Destiny. Clubs et joueurs fictifs. Tes carrières restent sur ce téléphone.",
+  "disclaimerCreate": "Clubs, joueurs, salaires et primes sont fictifs."
+ },
+ "rules": {
+  "format": {
+   "seriesFirstTo": 3,
+   "majorFinalFirstTo": 4,
+   "champsFinalFirstTo": 5,
+   "qualifierRounds": 5,
+   "qualifierWinPoints": 10
+  },
+  "qualifiers": {
+   "CDL": 8,
+   "CH": 4
+  },
+  "points": {
+   "CDL": [
+    100,
+    75,
+    60,
+    45,
+    30,
+    30,
+    15,
+    15,
+    0,
+    0,
+    0,
+    0
+   ],
+   "CH": [
+    60,
+    40,
+    25,
+    25,
+    10,
+    10,
+    0,
+    0
+   ]
+  },
+  "prizes": {
+   "major": [
+    40000,
+    20000,
+    10000,
+    5000,
+    2000,
+    2000,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "champs": [
+    250000,
+    120000,
+    60000,
+    30000,
+    12000,
+    12000,
+    6000,
+    6000
+   ],
+   "challengersScale": 0.1
+  },
+  "retention": {
+   "strongRaise": 1.15,
+   "stayChem": 10,
+   "stayMorale": 5,
+   "newTeamChem": 52,
+   "strongNote": 7.5,
+   "keepNote": 5.5
+  },
+  "simulation": {
+   "mapSpread": 9,
+   "tournamentNoise": 2.5
+  },
+  "difficulty": {
+   "clutchBase": 0.42,
+   "clutchSpread": 45,
+   "clutchMax": 0.85,
+   "winBonus": 0.7,
+   "failPenalty": 0.7,
+   "growth": 0.8,
+   "youngGrowth": 0.8,
+   "midGrowth": 0.3,
+   "potMin": 80,
+   "potMax": 95,
+   "offerMargin": 4,
+   "valueFame": 0.02,
+   "fameScale": 0.6,
+   "perfNeutral": 5.5,
+   "perfPerPoint": 0.5,
+   "perfChamps": 1,
+   "perfMajor": 0.25,
+   "perfMax": 4,
+   "perfMin": -1.5
+  }
+ },
+ "roles": {
+  "AV": {
+   "label": "Avant",
+   "description": "Tu gagnes les duels et tu fais avancer le pack.",
+   "weights": {
+    "aim": 0.4,
+    "move": 0.1,
+    "sense": 0.25,
+    "mental": 0.25
+   }
+  },
+  "TQ": {
+   "label": "Trois-quarts",
+   "description": "Tu fais la différence en vitesse et dans les intervalles.",
+   "weights": {
+    "aim": 0.15,
+    "move": 0.4,
+    "sense": 0.25,
+    "mental": 0.2
+   }
+  },
+  "PO": {
+   "label": "Polyvalent",
+   "description": "Tu dépannes partout, là où le club a besoin de toi.",
+   "weights": {
+    "aim": 0.25,
+    "move": 0.25,
+    "sense": 0.25,
+    "mental": 0.25
+   }
+  }
+ },
+ "origins": {
+  "centre": {
+   "label": "Formé au centre",
+   "summary": "+ Lecture du jeu, − Puissance",
+   "attributes": {
+    "sense": 4,
+    "aim": -2
+   },
+   "story": "Cinq ans au centre de formation, entre les cours le matin et les entraînements le soir. Tu connais le jeu par cœur."
+  },
+  "septs": {
+   "label": "Venu du rugby à 7",
+   "summary": "+ Vitesse, − Puissance",
+   "attributes": {
+    "move": 4,
+    "aim": -2
+   },
+   "story": "Tu as appris dans les tournois à 7, où chaque espace se paie cash. Le XV, c'est un nouveau défi."
+  },
+  "amateur": {
+   "label": "Révélé en amateur",
+   "summary": "+ Mental, − Lecture du jeu",
+   "attributes": {
+    "mental": 4,
+    "sense": -2
+   },
+   "story": "Tu travaillais la semaine et tu jouais le dimanche. Un recruteur t'a repéré par hasard, un soir de derby."
+  },
+  "gabarit": {
+   "label": "Gros gabarit",
+   "summary": "+ Puissance, − Vitesse",
+   "attributes": {
+    "aim": 4,
+    "move": -2
+   },
+   "story": "Depuis tes 15 ans, tu es le plus costaud du terrain. Il te reste à apprendre tout le reste."
+  }
+ },
+ "nationalities": [
+  [
+   "France",
+   "FR"
+  ],
+  [
+   "Nouvelle-Zélande",
+   "NZ"
+  ],
+  [
+   "Afrique du Sud",
+   "ZA"
+  ],
+  [
+   "Irlande",
+   "IE"
+  ],
+  [
+   "Royaume-Uni",
+   "GB"
+  ],
+  [
+   "Argentine",
+   "AR"
+  ],
+  [
+   "Fidji",
+   "FJ"
+  ],
+  [
+   "Samoa",
+   "WS"
+  ],
+  [
+   "Tonga",
+   "TO"
+  ],
+  [
+   "Géorgie",
+   "GE"
+  ],
+  [
+   "Italie",
+   "IT"
+  ],
+  [
+   "Australie",
+   "AU"
+  ],
+  [
+   "Japon",
+   "JP"
+  ],
+  [
+   "Belgique",
+   "BE"
+  ],
+  [
+   "Portugal",
+   "PT"
+  ],
+  [
+   "Espagne",
+   "ES"
+  ],
+  [
+   "Canada",
+   "CA"
+  ],
+  [
+   "Maroc",
+   "MA"
+  ]
+ ],
+ "starterTeams": [
+  {
+   "id": "VAL",
+   "text": "Club ambitieux. Tu démarres dans du confort."
+  },
+  {
+   "id": "COR",
+   "text": "Milieu de tableau. Il faudra tirer le groupe."
+  },
+  {
+   "id": "VEN",
+   "text": "Club modeste. Plus de temps de jeu, plus d'occasions de briller."
+  }
+ ],
+ "names": {
+  "firstNames": [
+   "Lucas",
+   "Hugo",
+   "Mathis",
+   "Romain",
+   "Baptiste",
+   "Théo",
+   "Antoine",
+   "Maxime",
+   "Julien",
+   "Clément",
+   "Arthur",
+   "Louis",
+   "Enzo",
+   "Yanis",
+   "Kylian",
+   "Nathan",
+   "Gabriel",
+   "Rayan",
+   "Noah",
+   "Malo",
+   "Tom",
+   "Sacha"
+  ],
+  "lastNames": [
+   "Laborde",
+   "Etchart",
+   "Larrieu",
+   "Cazenave",
+   "Peyrot",
+   "Sarrade",
+   "Bordenave",
+   "Lassalle",
+   "Ducasse",
+   "Pujol",
+   "Garat",
+   "Rouquette",
+   "Teulière",
+   "Lafargue",
+   "Daguerre",
+   "Marty",
+   "Fabre",
+   "Castex",
+   "Lalanne",
+   "Mirande",
+   "Soubiron",
+   "Hourcade",
+   "Barthe",
+   "Ithurbide",
+   "Sallaberry",
+   "Dufau",
+   "Lescure",
+   "Capdevielle",
+   "Bergeret",
+   "Noguès",
+   "Lacoste",
+   "Darrigade",
+   "Pédarré",
+   "Laporte",
+   "Bergès",
+   "Lasserre",
+   "Arrieta"
+  ],
+  "generatedNats": [
+   "FR",
+   "FR",
+   "FR",
+   "FR",
+   "FR",
+   "NZ",
+   "ZA",
+   "FJ",
+   "AR",
+   "IE",
+   "GE",
+   "WS",
+   "TO",
+   "IT"
+  ]
+ },
+ "teams": {
+  "cdl": [
+   {
+    "id": "GAR",
+    "name": "Aigles de Garonne",
+    "prestige": 96,
+    "color": "#C8102E",
+    "tag": "AIG",
+    "players": [
+     {
+      "name": "R. Ducasse",
+      "rating": 93,
+      "nat": "FR"
+     },
+     {
+      "name": "D. Byrne",
+      "rating": 89,
+      "nat": "IE"
+     },
+     {
+      "name": "E. Mirande",
+      "rating": 89,
+      "nat": "FR"
+     },
+     {
+      "name": "A. Hourcade",
+      "rating": 87,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "BEA",
+    "name": "Lions du Béarn",
+    "prestige": 94,
+    "color": "#1E5AA8",
+    "tag": "LDB",
+    "players": [
+     {
+      "name": "Y. Daguerre",
+      "rating": 92,
+      "nat": "FR"
+     },
+     {
+      "name": "S. du Toit",
+      "rating": 89,
+      "nat": "ZA"
+     },
+     {
+      "name": "L. Gogia",
+      "rating": 89,
+      "nat": "GE"
+     },
+     {
+      "name": "M. Pujol",
+      "rating": 88,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "OCE",
+    "name": "Corsaires de l'Océan",
+    "prestige": 90,
+    "color": "#0B8A83",
+    "tag": "COR",
+    "players": [
+     {
+      "name": "A. Fabre",
+      "rating": 89,
+      "nat": "FR"
+     },
+     {
+      "name": "N. Matene",
+      "rating": 87,
+      "nat": "NZ"
+     },
+     {
+      "name": "L. Capdevielle",
+      "rating": 85,
+      "nat": "FR"
+     },
+     {
+      "name": "M. Marty",
+      "rating": 84,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "PYR",
+    "name": "Ours des Pyrénées",
+    "prestige": 88,
+    "color": "#8A5A2B",
+    "tag": "OUR",
+    "players": [
+     {
+      "name": "A. Garat",
+      "rating": 88,
+      "nat": "FR"
+     },
+     {
+      "name": "R. Lalanne",
+      "rating": 87,
+      "nat": "FR"
+     },
+     {
+      "name": "S. Doyle",
+      "rating": 87,
+      "nat": "IE"
+     },
+     {
+      "name": "K. Soubiron",
+      "rating": 84,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "TET",
+    "name": "Dragons de la Têt",
+    "prestige": 85,
+    "color": "#E3B505",
+    "tag": "DRA",
+    "players": [
+     {
+      "name": "J. Lassalle",
+      "rating": 88,
+      "nat": "FR"
+     },
+     {
+      "name": "L. Rouquette",
+      "rating": 85,
+      "nat": "FR"
+     },
+     {
+      "name": "N. Parata",
+      "rating": 86,
+      "nat": "NZ"
+     },
+     {
+      "name": "R. Noguès",
+      "rating": 81,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "RHO",
+    "name": "Gones du Rhône",
+    "prestige": 82,
+    "color": "#8E2A6B",
+    "tag": "GON",
+    "players": [
+     {
+      "name": "P. Pretorius",
+      "rating": 86,
+      "nat": "ZA"
+     },
+     {
+      "name": "V. Havili",
+      "rating": 87,
+      "nat": "TO"
+     },
+     {
+      "name": "J. Ratudina",
+      "rating": 82,
+      "nat": "FJ"
+     },
+     {
+      "name": "L. Bordenave",
+      "rating": 82,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "CAP",
+    "name": "Titans de la Capitale",
+    "prestige": 80,
+    "color": "#2B3F86",
+    "tag": "TIT",
+    "players": [
+     {
+      "name": "H. Lescure",
+      "rating": 87,
+      "nat": "FR"
+     },
+     {
+      "name": "A. Ithurbide",
+      "rating": 82,
+      "nat": "FR"
+     },
+     {
+      "name": "D. Kelleher",
+      "rating": 81,
+      "nat": "IE"
+     },
+     {
+      "name": "A. Barthe",
+      "rating": 82,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "PRO",
+    "name": "Mistral de Provence",
+    "prestige": 78,
+    "color": "#3A9AD9",
+    "tag": "MIS",
+    "players": [
+     {
+      "name": "B. Sarrade",
+      "rating": 86,
+      "nat": "FR"
+     },
+     {
+      "name": "M. Peyrot",
+      "rating": 84,
+      "nat": "FR"
+     },
+     {
+      "name": "F. Leiataua",
+      "rating": 84,
+      "nat": "WS"
+     },
+     {
+      "name": "L. Larrieu",
+      "rating": 79,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "AUV",
+    "name": "Volcans d'Auvergne",
+    "prestige": 75,
+    "color": "#E4572E",
+    "tag": "VOL",
+    "players": [
+     {
+      "name": "L. Laborde",
+      "rating": 86,
+      "nat": "FR"
+     },
+     {
+      "name": "T. Afamasaga",
+      "rating": 84,
+      "nat": "WS"
+     },
+     {
+      "name": "R. Etchart",
+      "rating": 80,
+      "nat": "FR"
+     },
+     {
+      "name": "R. Cazenave",
+      "rating": 78,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "LAN",
+    "name": "Taureaux des Landes",
+    "prestige": 73,
+    "color": "#2F8F46",
+    "tag": "TAU",
+    "players": [
+     {
+      "name": "S. Nkosi",
+      "rating": 82,
+      "nat": "ZA"
+     },
+     {
+      "name": "D. Doyle",
+      "rating": 84,
+      "nat": "IE"
+     },
+     {
+      "name": "F. Afamasaga",
+      "rating": 82,
+      "nat": "WS"
+     },
+     {
+      "name": "J. Bergeret",
+      "rating": 78,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "NOR",
+    "name": "Vikings du Nord",
+    "prestige": 70,
+    "color": "#6E7F8D",
+    "tag": "VIK",
+    "players": [
+     {
+      "name": "C. Castex",
+      "rating": 83,
+      "nat": "FR"
+     },
+     {
+      "name": "J. van Wyk",
+      "rating": 80,
+      "nat": "ZA"
+     },
+     {
+      "name": "S. Taufa",
+      "rating": 80,
+      "nat": "TO"
+     },
+     {
+      "name": "A. Teulière",
+      "rating": 76,
+      "nat": "FR"
+     }
+    ]
+   },
+   {
+    "id": "BRE",
+    "name": "Hermines de Bretagne",
+    "prestige": 68,
+    "color": "#E9E6E0",
+    "tag": "HER",
+    "players": [
+     {
+      "name": "M. Lafargue",
+      "rating": 83,
+      "nat": "FR"
+     },
+     {
+      "name": "L. Beridze",
+      "rating": 81,
+      "nat": "GE"
+     },
+     {
+      "name": "Y. Dufau",
+      "rating": 79,
+      "nat": "FR"
+     },
+     {
+      "name": "C. Kelleher",
+      "rating": 76,
+      "nat": "IE"
+     }
+    ]
+   }
+  ],
+  "challengers": [
+   {
+    "id": "VAL",
+    "name": "Racing de la Vallée",
+    "prestige": 40,
+    "color": "#5B6CC9",
+    "tag": "RAC"
+   },
+   {
+    "id": "LOT",
+    "name": "Union du Lot",
+    "prestige": 36,
+    "color": "#C9563B",
+    "tag": "UDL"
+   },
+   {
+    "id": "MIN",
+    "name": "Stade Minervois",
+    "prestige": 38,
+    "color": "#2FA58C",
+    "tag": "SMI"
+   },
+   {
+    "id": "GAS",
+    "name": "Olympique Gascon",
+    "prestige": 34,
+    "color": "#7FB2E5",
+    "tag": "OGA"
+   },
+   {
+    "id": "COR",
+    "name": "Avenir Corrézien",
+    "prestige": 35,
+    "color": "#BDB6AE",
+    "tag": "AVC"
+   },
+   {
+    "id": "VEN",
+    "name": "Sporting Vendéen",
+    "prestige": 32,
+    "color": "#D2C33A",
+    "tag": "SPV"
+   },
+   {
+    "id": "ARD",
+    "name": "Entente Ardéchoise",
+    "prestige": 37,
+    "color": "#9A55C2",
+    "tag": "EAR"
+   },
+   {
+    "id": "BAS",
+    "name": "Cercle Basque",
+    "prestige": 33,
+    "color": "#86A852",
+    "tag": "CBA"
+   }
+  ],
+  "freeAgents": [
+   {
+    "name": "A. Sallaberry",
+    "rating": 79,
+    "nat": "FR"
+   },
+   {
+    "name": "T. Rangi",
+    "rating": 76,
+    "nat": "NZ"
+   }
+  ]
+ },
+ "scenarios": [
+  {
+   "id": "prep-preparation-physique",
+   "pool": "prep",
+   "title": "Préparation physique",
+   "text": "Six semaines avant la reprise. Le préparateur te laisse choisir ton programme.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Musculation lourde, matin et soir",
+     "effects": {
+      "aim": 3,
+      "move": -1,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Vitesse et appuis sur la piste",
+     "effects": {
+      "move": 3,
+      "form": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Un peu de tout, sans se cramer",
+     "effects": {
+      "aim": 1,
+      "move": 1,
+      "form": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-stage-en-altitude",
+   "pool": "prep",
+   "title": "Stage en altitude",
+   "text": "Le club part deux semaines en montagne. Le programme fait peur à tout le groupe.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Tout donner dès le premier jour",
+     "effects": {
+      "mental": 2,
+      "form": 2,
+      "morale": -4
+     }
+    },
+    {
+     "id": "b",
+     "label": "Monter en charge petit à petit",
+     "effects": {
+      "form": 2,
+      "morale": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Profiter du stage pour souder le groupe",
+     "effects": {
+      "chem": 7,
+      "morale": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-changer-de-poste",
+   "pool": "prep",
+   "title": "Changer de poste ?",
+   "text": "L'entraîneur pense que tu serais plus utile un cran plus loin du ballon. Il te laisse décider.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter le défi",
+     "effects": {
+      "sense": 3,
+      "form": -1,
+      "chem": 3
+     }
+    },
+    {
+     "id": "b",
+     "label": "Rester à ton poste et le prouver",
+     "effects": {
+      "aim": 1,
+      "move": 1,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Demander un essai en match amical",
+     "effects": {
+      "sense": 1,
+      "chem": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "prep-le-kine-ou-la-salle",
+   "pool": "prep",
+   "title": "Le kiné ou la salle",
+   "text": "Ton épaule grince depuis l'an dernier. Le kiné te conseille de lever le pied.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Soigner l'épaule à fond",
+     "effects": {
+      "form": 3,
+      "aim": -1,
+      "money": -2000
+     }
+    },
+    {
+     "id": "b",
+     "label": "Serrer les dents et pousser",
+     "effects": {
+      "aim": 2,
+      "form": -2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Écouter le kiné à moitié",
+     "effects": {
+      "form": 1,
+      "aim": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-seance-de-touche",
+   "pool": "train",
+   "title": "Séance de touche",
+   "text": "Les lancers ne passent plus. L'entraîneur des avants veut une séance en plus chaque soir.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Rester tous les soirs",
+     "effects": {
+      "sense": 2,
+      "chem": 4,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Y aller deux fois par semaine",
+     "effects": {
+      "sense": 1,
+      "chem": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Te concentrer sur ton propre jeu",
+     "effects": {
+      "aim": 2,
+      "chem": -3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-la-video-du-lundi",
+   "pool": "train",
+   "title": "La vidéo du lundi",
+   "text": "L'analyste montre tes trois plaquages ratés devant tout le groupe.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Assumer et bosser ton placement",
+     "effects": {
+      "sense": 3,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Revoir tes appuis en défense",
+     "effects": {
+      "move": 2,
+      "form": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Rappeler tes deux essais du week-end",
+     "effects": {
+      "morale": 2,
+      "chem": -4
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-le-jeune-du-centre-de-formation",
+   "pool": "train",
+   "title": "Le jeune du centre de formation",
+   "text": "Un espoir de 17 ans s'entraîne avec les pros. Il ne lâche jamais rien et te bouscule à chaque séance.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Le prendre sous ton aile",
+     "effects": {
+      "chem": 6,
+      "mental": 2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Le défier sur chaque exercice",
+     "effects": {
+      "aim": 2,
+      "morale": 1,
+      "chem": -1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Doubler tes heures sans rien dire",
+     "effects": {
+      "move": 2,
+      "aim": 1,
+      "morale": -3
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-seance-de-contacts",
+   "pool": "train",
+   "title": "Séance de contacts",
+   "text": "L'entraîneur veut une séance de contacts à fond, à trois jours du match.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Y aller à 100 %",
+     "effects": {
+      "aim": 2,
+      "mental": 1,
+      "form": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Gérer ton effort",
+     "effects": {
+      "form": 1,
+      "aim": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Demander à l'alléger pour tout le groupe",
+     "effects": {
+      "form": 2,
+      "chem": 2,
+      "fame": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "train-le-jeu-au-pied",
+   "pool": "train",
+   "title": "Le jeu au pied",
+   "text": "Le buteur titulaire est blessé pour un mois. Le staff cherche quelqu'un pour taper.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Rester une heure de plus chaque jour pour buter",
+     "effects": {
+      "sense": 2,
+      "mental": 2,
+      "morale": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Laisser ça aux spécialistes",
+     "effects": {
+      "form": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Travailler les touches trouvées au pied",
+     "effects": {
+      "sense": 2,
+      "move": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-la-troisieme-mi-temps",
+   "pool": "off",
+   "title": "La troisième mi-temps",
+   "text": "Victoire au bout du suspense. Tout le monde part fêter ça, et l'entraînement reprend demain à 9 h.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Fêter jusqu'au bout avec le groupe",
+     "effects": {
+      "chem": 7,
+      "morale": 5,
+      "form": -2
+     }
+    },
+    {
+     "id": "b",
+     "label": "Une heure, puis au lit",
+     "effects": {
+      "chem": 3,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Rentrer directement",
+     "effects": {
+      "form": 2,
+      "chem": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-le-sponsor-local",
+   "pool": "off",
+   "title": "Le sponsor local",
+   "text": "Une marque de la région veut ton visage sur ses camions de livraison.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Signer, c'est bon pour ta notoriété",
+     "effects": {
+      "fame": 6,
+      "money": 9000,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Signer, sans les séances photo en semaine",
+     "effects": {
+      "fame": 3,
+      "money": 4000
+     }
+    },
+    {
+     "id": "c",
+     "label": "Refuser : tu n'as encore rien prouvé",
+     "effects": {
+      "mental": 2,
+      "chem": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-le-journal-regional",
+   "pool": "off",
+   "title": "Le journal régional",
+   "text": "Un journaliste te demande ce que tu penses du choix de l'entraîneur de te laisser sur le banc.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Dire franchement que tu es déçu",
+     "effects": {
+      "fame": 5,
+      "chem": -5
+     }
+    },
+    {
+     "id": "b",
+     "label": "Répondre que tu travailles pour revenir",
+     "effects": {
+      "chem": 4,
+      "fame": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Refuser l'interview",
+     "effects": {
+      "form": 1,
+      "fame": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-les-reseaux-apres-la-defaite",
+   "pool": "off",
+   "title": "Les réseaux après la défaite",
+   "text": "Ton en-avant à la dernière minute tourne partout. Les messages pleuvent.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Tout couper pendant une semaine",
+     "effects": {
+      "mental": 2,
+      "morale": 2,
+      "fame": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Répondre avec humour",
+     "effects": {
+      "fame": 4,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Lire tous les messages",
+     "effects": {
+      "morale": -6,
+      "mental": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-ton-ancien-club-amateur",
+   "pool": "off",
+   "title": "Ton ancien club amateur",
+   "text": "Ton premier club organise une fête pour ses 100 ans et t'invite à donner le coup d'envoi.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Y aller et rester toute la journée",
+     "effects": {
+      "morale": 8,
+      "fame": 3,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Passer une heure",
+     "effects": {
+      "morale": 4,
+      "fame": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Envoyer un maillot dédicacé",
+     "effects": {
+      "morale": 1,
+      "money": -300
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-une-blessure-qui-traine",
+   "pool": "off",
+   "title": "Une blessure qui traîne",
+   "text": "Ta cheville gonfle après chaque match. Le médecin propose une infiltration avant le prochain tournoi.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter l'infiltration",
+     "effects": {
+      "form": 2,
+      "move": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Faire l'impasse sur un match",
+     "effects": {
+      "form": 3,
+      "fame": -2,
+      "chem": -2
+     }
+    },
+    {
+     "id": "c",
+     "label": "Jouer avec, sans rien dire",
+     "effects": {
+      "form": -2,
+      "mental": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-rumeur-de-transfert",
+   "pool": "off",
+   "title": "Rumeur de transfert",
+   "text": "Un club rival plus riche te fait passer un message. Les supporters l'ont déjà vu sur les réseaux.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Répondre et faire monter les enchères",
+     "effects": {
+      "fame": 4,
+      "money": 3000,
+      "chem": -6
+     }
+    },
+    {
+     "id": "b",
+     "label": "Démentir et afficher ta fidélité",
+     "effects": {
+      "chem": 6,
+      "fame": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Ne rien dire jusqu'au mercato",
+     "effects": {
+      "morale": 1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-la-selection-t-observe",
+   "pool": "off",
+   "title": "La sélection t'observe",
+   "text": "Le sélectionneur national était en tribune. On dit qu'il hésite entre toi et un autre joueur.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Mettre les bouchées doubles",
+     "effects": {
+      "aim": 1,
+      "move": 1,
+      "morale": -3,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Rester toi-même",
+     "effects": {
+      "mental": 2,
+      "morale": 2
+     }
+    },
+    {
+     "id": "c",
+     "label": "En parler ouvertement en interview",
+     "effects": {
+      "fame": 5,
+      "mental": -1
+     }
+    }
+   ]
+  },
+  {
+   "id": "off-l-ecole-de-rugby",
+   "pool": "off",
+   "title": "L'école de rugby",
+   "text": "Les éducateurs de la ville te demandent de venir encadrer les moins de 12 ans une fois par semaine.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Accepter avec plaisir",
+     "effects": {
+      "morale": 6,
+      "fame": 3,
+      "form": -1
+     }
+    },
+    {
+     "id": "b",
+     "label": "Venir une fois par mois",
+     "effects": {
+      "morale": 3,
+      "fame": 1
+     }
+    },
+    {
+     "id": "c",
+     "label": "Décliner pour récupérer",
+     "effects": {
+      "form": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "clutch-derniere-action-deux-points-de-retard",
+   "pool": "clutch",
+   "title": "Dernière action, deux points de retard",
+   "text": "Pénalité à 40 mètres, 80e minute. Le capitaine te regarde : c'est toi qui décides.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Tenter la pénalité",
+     "stat": "mental",
+     "difficulty": -0.06,
+     "impact": 3,
+     "win": "Le ballon passe entre les poteaux. Le stade explose.",
+     "lose": "Le ballon frôle le poteau et sort."
+    },
+    {
+     "id": "b",
+     "label": "Jouer la touche pour un ballon porté",
+     "stat": "aim",
+     "difficulty": -0.02,
+     "impact": 2.5,
+     "win": "Le ballon porté avance jusqu'à l'en-but. Essai !",
+     "lose": "Le maul est écroulé, le ballon est perdu."
+    },
+    {
+     "id": "c",
+     "label": "Jouer vite à la main",
+     "stat": "move",
+     "difficulty": -0.1,
+     "impact": 3,
+     "win": "Personne n'est replacé. Tu files seul à l'essai.",
+     "lose": "Tu te fais prendre dans l'axe, l'arbitre siffle la fin."
+    }
+   ]
+  },
+  {
+   "id": "clutch-un-contre-un-sur-l-aile",
+   "pool": "clutch",
+   "title": "Un contre un sur l'aile",
+   "text": "Il ne reste que l'arrière entre toi et l'en-but, à 20 mètres.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Le raffut, plein fer",
+     "stat": "aim",
+     "difficulty": -0.04,
+     "impact": 2.5,
+     "win": "Il vole. Tu marques en coin.",
+     "lose": "Il te plaque à deux mètres de la ligne."
+    },
+    {
+     "id": "b",
+     "label": "Le crochet intérieur",
+     "stat": "move",
+     "difficulty": -0.06,
+     "impact": 3,
+     "win": "Il glisse, tu passes. Essai en solitaire.",
+     "lose": "Tu perds l'appui et le ballon tombe."
+    },
+    {
+     "id": "c",
+     "label": "Attendre le soutien et faire la passe",
+     "stat": "sense",
+     "difficulty": 0.05,
+     "impact": 2,
+     "win": "Ton coéquipier marque sous les poteaux.",
+     "lose": "La passe est trop haute, ballon perdu."
+    }
+   ]
+  },
+  {
+   "id": "clutch-melee-a-cinq-metres",
+   "pool": "clutch",
+   "title": "Mêlée à cinq mètres",
+   "text": "Mêlée offensive à cinq mètres de leur ligne, 30 secondes avant la mi-temps.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Pousser jusqu'au bout",
+     "stat": "aim",
+     "difficulty": -0.03,
+     "impact": 2.5,
+     "win": "La mêlée recule. Essai de pénalité.",
+     "lose": "Ils tiennent et récupèrent le ballon."
+    },
+    {
+     "id": "b",
+     "label": "Sortir le ballon vite",
+     "stat": "sense",
+     "difficulty": 0.02,
+     "impact": 2,
+     "win": "La défense est prise de court. Essai au large.",
+     "lose": "Le ballon sort mal, en-avant."
+    },
+    {
+     "id": "c",
+     "label": "Calmer les avants et prendre la pénalité",
+     "stat": "mental",
+     "difficulty": 0.05,
+     "impact": 1.5,
+     "win": "Trois points de plus avant la pause.",
+     "lose": "L'arbitre siffle contre vous."
+    }
+   ]
+  },
+  {
+   "id": "clutch-a-quatorze-contre-quinze",
+   "pool": "clutch",
+   "title": "À quatorze contre quinze",
+   "text": "Carton jaune pour ton équipe. Dix minutes à tenir, avec trois points d'avance.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Monter très vite en défense",
+     "stat": "move",
+     "difficulty": -0.04,
+     "impact": 2.5,
+     "win": "Ils ne passent pas. Le stade est debout.",
+     "lose": "Un trou au large, ils marquent."
+    },
+    {
+     "id": "b",
+     "label": "Garder le ballon le plus longtemps possible",
+     "stat": "sense",
+     "difficulty": 0,
+     "impact": 2,
+     "win": "Vous gardez le ballon et le temps passe.",
+     "lose": "Ballon perdu au sol, essai pour eux."
+    },
+    {
+     "id": "c",
+     "label": "Rassurer tout le monde",
+     "stat": "mental",
+     "difficulty": 0.04,
+     "impact": 1.5,
+     "win": "Personne ne panique. Vous tenez.",
+     "lose": "Le stress gagne, deux fautes de suite."
+    }
+   ]
+  },
+  {
+   "id": "clutch-leur-numero-8-inarretable",
+   "pool": "clutch",
+   "title": "Leur numéro 8 inarrêtable",
+   "text": "Depuis vingt minutes, leur troisième ligne fait reculer toute ta défense.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Le plaquer bas, à chaque fois",
+     "stat": "aim",
+     "difficulty": -0.06,
+     "impact": 3,
+     "win": "Tu le couches trois fois de suite. Il sort à la 60e.",
+     "lose": "Il te traîne sur cinq mètres."
+    },
+    {
+     "id": "b",
+     "label": "Organiser un double plaquage",
+     "stat": "sense",
+     "difficulty": 0,
+     "impact": 2,
+     "win": "À deux, vous l'arrêtez net.",
+     "lose": "Le décalage laisse un trou, et ils en profitent."
+    },
+    {
+     "id": "c",
+     "label": "Anticiper ses courses",
+     "stat": "move",
+     "difficulty": -0.03,
+     "impact": 2.5,
+     "win": "Tu intercepte sa passe. Contre-attaque.",
+     "lose": "Tu te jettes trop tôt, il passe."
+    }
+   ]
+  },
+  {
+   "id": "clutch-la-chandelle-dans-tes-22",
+   "pool": "clutch",
+   "title": "La chandelle dans tes 22",
+   "text": "Le ballon monte très haut. Trois adversaires arrivent plein champ sur toi.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Rester sous le ballon et l'attraper",
+     "stat": "mental",
+     "difficulty": -0.03,
+     "impact": 2.5,
+     "win": "Tu la gardes, malgré le choc. Le public t'applaudit.",
+     "lose": "Le ballon rebondit sur ton épaule."
+    },
+    {
+     "id": "b",
+     "label": "Sauter plus haut qu'eux",
+     "stat": "aim",
+     "difficulty": -0.08,
+     "impact": 3,
+     "win": "Tu domines les airs et relances.",
+     "lose": "Tu retombes mal et ils récupèrent."
+    },
+    {
+     "id": "c",
+     "label": "Te placer pour le rebond",
+     "stat": "sense",
+     "difficulty": 0.05,
+     "impact": 1.5,
+     "win": "Tu récupères le rebond et dégages.",
+     "lose": "Le rebond part de leur côté."
+    }
+   ]
+  },
+  {
+   "id": "clutch-le-ballon-de-la-gagne",
+   "pool": "clutch",
+   "title": "Le ballon de la gagne",
+   "text": "Touche à dix mètres de leur ligne, 78e minute. Vous perdez de quatre points.",
+   "options": [
+    {
+     "id": "a",
+     "label": "Sauter en première position",
+     "stat": "aim",
+     "difficulty": -0.02,
+     "impact": 2,
+     "win": "Lancer parfait. Le maul part.",
+     "lose": "Ils contrent le lancer."
+    },
+    {
+     "id": "b",
+     "label": "Proposer une combinaison travaillée la semaine",
+     "stat": "sense",
+     "difficulty": -0.05,
+     "impact": 3,
+     "win": "La combinaison les prend à revers. Essai !",
+     "lose": "La combinaison s'emmêle, ballon perdu."
+    },
+    {
+     "id": "c",
+     "label": "Jouer le maul et pousser tous ensemble",
+     "stat": "mental",
+     "difficulty": 0.02,
+     "impact": 2,
+     "win": "Vous avancez mètre par mètre jusqu'à l'en-but.",
+     "lose": "Le maul s'arrête à un mètre."
+    }
+   ]
+  }
+ ]
+}
