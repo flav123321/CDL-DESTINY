@@ -602,7 +602,8 @@ function fight(sim, defSide) {
   for (let i = 0; i < n; i++) {
     const vs = aliveOf(L); if (!vs.length) break;
     // En Overload, le porteur est souvent la cible ; l'escorte le protège.
-    let v = pick(vs);
+    // En direct, la victime est de préférence l'adversaire le plus proche du tireur sur la carte.
+    let v = sim.near && R() < .85 ? sim.near(killer.id, vs) : pick(vs);
     const car = vs.find(p => p.id === sim.carrier);
     if (car && v !== car && R() < (L.tac === "equilibre" ? .15 : L.tac === "agressif" ? .45 : .3)) v = car;
     kill(sim, killer, v, w);
@@ -611,7 +612,7 @@ function fight(sim, defSide) {
   // Échange : le perdant tue parfois un adversaire.
   if (R() < .26 && aliveOf(L).length && aliveOf(W).length) {
     const k2 = wpick(aliveOf(L), p => killerWeight(sim, p));
-    const v2 = pick(aliveOf(W));
+    const v2 = sim.near && R() < .85 ? sim.near(k2.id, aliveOf(W)) : pick(aliveOf(W));
     if (v2) kill(sim, k2, v2, l);
   }
   sim.mom[w] = clamp(sim.mom[w] + .3, -1.5, 1.5); sim.mom[l] = clamp(sim.mom[l] - .2, -1.5, 1.5);
@@ -2048,6 +2049,12 @@ function nextMap() {
   const ids = [L.ser.a, L.ser.b];
   const tac = [0, 1].map(i => i === L.side ? L.tac : E.aiTactic(S, ids[i]));
   L.sim = E.createMapSim(S, m.mode, m.map, ids, tac);
+  // Le moteur demande qui est le plus proche : les kills ont lieu là où les joueurs se croisent.
+  L.sim.near = (kid, vs) => {
+    const k = L.dots && L.dots[kid]; if (!k) return vs[Math.floor(Math.random() * vs.length)];
+    const sc = vs.map(v => { const d = L.dots[v.id]; const dist = d ? Math.hypot(d.x - k.x, d.y - k.y) : 99; return { v, s: dist + (d && !los(L.layout, k, d) ? 18 : 0) + Math.random() * 6 }; });
+    sc.sort((a, b) => a.s - b.s); return sc[0].v;
+  };
   L.layout = layoutFor(m.map); L.slots = assignSlots(L.sim); L.dots = initDots(L);
   L.tracers = []; L.shots = []; L.kfeed = []; L.bg = null; L.feed = []; L.evIdx = 0; L.phase = "map"; L.acc = 0; L.sbTab = "map";
 }
@@ -2085,7 +2092,7 @@ function duel(L, k, v, side) {
   const m = 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < m; i++) shot(L, v.x, v.y, sx + (Math.random() - .5) * 4, sy + (Math.random() - .5) * 4, 1 - side, .02 + i * .07, false);
   v.hit = .35; v.dx = v.x; v.dy = v.y; v.dt = L.sim.mode === "SND" ? 999 : 1.8;
-  k.recoil = .25;
+  k.recoil = .25; k.fireCd = 1.5;
 }
 function shot(L, x1, y1, x2, y2, side, delay, hit) {
   if (L.shots.length > 160) return;
@@ -2121,14 +2128,16 @@ function moveDots(dt) {
     const A = Object.values(L.dots).filter(d => d.alive && d.side === 0), B = Object.values(L.dots).filter(d => d.alive && d.side === 1);
     for (const a of A) for (const b of B) {
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      if (dist > 26 || Math.random() > dt * 1.1) continue;
+      if (dist > 22 || Math.random() > dt * .3) continue;
+      if ((a.fireCd || 0) > 0 || (b.fireCd || 0) > 0) continue;
       if (!los(lay, a, b)) continue;
+      a.fireCd = b.fireCd = 3;
       const [s, t, side] = Math.random() < .5 ? [a, b, 0] : [b, a, 1];
       s.aim = Math.atan2(t.y - s.y, t.x - s.x); s.aimT = 1;
       t.aim = Math.atan2(s.y - t.y, s.x - t.x); t.aimT = 1;
-      const n = 2 + Math.floor(Math.random() * 3);
+      const n = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < n; i++) shot(L, s.x, s.y, t.x + (Math.random() - .5) * 5, t.y + (Math.random() - .5) * 5, side, i * .07, false);
-      if (Math.random() < .6) shot(L, t.x, t.y, s.x + (Math.random() - .5) * 5, s.y + (Math.random() - .5) * 5, 1 - side, .1, false);
+      if (Math.random() < .35) shot(L, t.x, t.y, s.x + (Math.random() - .5) * 5, s.y + (Math.random() - .5) * 5, 1 - side, .1, false);
     }
   }
   for (const id in L.dots) {
@@ -2137,6 +2146,7 @@ function moveDots(dt) {
     if (d.hit > 0) d.hit -= dt;
     if (d.aimT > 0) d.aimT -= dt;
     if (d.recoil > 0) d.recoil -= dt;
+    if (d.fireCd > 0) d.fireCd -= dt;
     const want = d.aimT > 0 ? d.aim : d.mv;
     if (want != null) { let da = want - (d.ang || 0); da = Math.atan2(Math.sin(da), Math.cos(da)); d.ang = (d.ang || 0) + da * Math.min(1, dt * 12); }
   }

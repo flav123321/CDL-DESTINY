@@ -346,7 +346,8 @@ function fight(sim, defSide) {
   for (let i = 0; i < n; i++) {
     const vs = aliveOf(L); if (!vs.length) break;
     // En Overload, le porteur est souvent la cible ; l'escorte le protège.
-    let v = pick(vs);
+    // En direct, la victime est de préférence l'adversaire le plus proche du tireur sur la carte.
+    let v = sim.near && R() < .85 ? sim.near(killer.id, vs) : pick(vs);
     const car = vs.find(p => p.id === sim.carrier);
     if (car && v !== car && R() < (L.tac === "equilibre" ? .15 : L.tac === "agressif" ? .45 : .3)) v = car;
     kill(sim, killer, v, w);
@@ -355,7 +356,7 @@ function fight(sim, defSide) {
   // Échange : le perdant tue parfois un adversaire.
   if (R() < .26 && aliveOf(L).length && aliveOf(W).length) {
     const k2 = wpick(aliveOf(L), p => killerWeight(sim, p));
-    const v2 = pick(aliveOf(W));
+    const v2 = sim.near && R() < .85 ? sim.near(k2.id, aliveOf(W)) : pick(aliveOf(W));
     if (v2) kill(sim, k2, v2, l);
   }
   sim.mom[w] = clamp(sim.mom[w] + .3, -1.5, 1.5); sim.mom[l] = clamp(sim.mom[l] - .2, -1.5, 1.5);
