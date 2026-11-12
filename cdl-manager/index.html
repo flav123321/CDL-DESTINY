@@ -2049,7 +2049,7 @@ function nextMap() {
   const tac = [0, 1].map(i => i === L.side ? L.tac : E.aiTactic(S, ids[i]));
   L.sim = E.createMapSim(S, m.mode, m.map, ids, tac);
   L.layout = layoutFor(m.map); L.slots = assignSlots(L.sim); L.dots = initDots(L);
-  L.tracers = []; L.feed = []; L.evIdx = 0; L.phase = "map"; L.acc = 0; L.sbTab = "map";
+  L.tracers = []; L.shots = []; L.kfeed = []; L.bg = null; L.feed = []; L.evIdx = 0; L.phase = "map"; L.acc = 0; L.sbTab = "map";
 }
 function pumpEvents() {
   const L = ui.match, sim = L.sim;
@@ -2057,13 +2057,39 @@ function pumpEvents() {
     const e = sim.events[L.evIdx++];
     if (e.type === "kill") {
       const k = L.dots[e.killer], v = L.dots[e.victim];
-      if (k && v) { const dist = Math.hypot(k.x - v.x, k.y - v.y), f = Math.min(1, 14 / Math.max(1, dist)); L.tracers.push({ x1: v.x + (k.x - v.x) * f, y1: v.y + (k.y - v.y) * f, x2: v.x, y2: v.y, life: .5, side: e.side }); }
-      if (v) { v.dx = v.x; v.dy = v.y; v.dt = sim.mode === "SND" ? 999 : 1.6; }
+      if (k && v) duel(L, k, v, e.side);
+      if (k && v) { L.kfeed.unshift({ k: k.name, ks: k.side, v: v.name, vs: v.side, life: 6, multi: 0 }); if (L.kfeed.length > 6) L.kfeed.length = 6; }
     }
-    if (e.type === "round") for (const id in L.dots) { const d = L.dots[id]; const sp = L.layout.spawns[d.side][d.k]; d.x = sp.x; d.y = sp.y; d.path = []; d.key = ""; d.dt = 0; }
+    if (e.type === "kill2" || e.type === "big") { const top = L.kfeed[0]; if (top) top.multi = e.type === "big" ? 3 : 2; }
+    if (e.type === "round") for (const id in L.dots) { const d = L.dots[id]; const sp = L.layout.spawns[d.side][d.k]; d.x = sp.x; d.y = sp.y; d.path = []; d.key = ""; d.dt = 0; d.hit = 0; }
     if (e.type !== "kill" || L.feed.length < 3 || Math.random() < .5) L.feed.unshift(e);
     if (L.feed.length > 9) L.feed.length = 9;
   }
+}
+/* Un duel visible : rafale du tireur, riposte manquée de la cible, impact, puis la cible tombe. */
+function duel(L, k, v, side) {
+  const dist = Math.hypot(k.x - v.x, k.y - v.y);
+  // Si le tireur est loin, la rafale part d'un point proche de la cible, dans sa direction.
+  const f = Math.min(1, 22 / Math.max(1, dist));
+  const sx = v.x + (k.x - v.x) * f, sy = v.y + (k.y - v.y) * f;
+  if (dist > 22) { k.x += (v.x - k.x) * .08; k.y += (v.y - k.y) * .08; }
+  k.aim = Math.atan2(v.y - sy, v.x - sx); k.aimT = 1.2;
+  v.aim = Math.atan2(sy - v.y, sx - v.x); v.aimT = 1.2;
+  const n = 3 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < n; i++) {
+    const last = i === n - 1;
+    const miss = last ? 0 : (Math.random() < .45 ? 1.6 : 0);
+    shot(L, sx, sy, v.x + (Math.random() - .5) * (miss * 2 + .6), v.y + (Math.random() - .5) * (miss * 2 + .6), side, i * .055, last || miss === 0);
+  }
+  // Riposte de la cible
+  const m = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < m; i++) shot(L, v.x, v.y, sx + (Math.random() - .5) * 4, sy + (Math.random() - .5) * 4, 1 - side, .02 + i * .07, false);
+  v.hit = .35; v.dx = v.x; v.dy = v.y; v.dt = L.sim.mode === "SND" ? 999 : 1.8;
+  k.recoil = .25;
+}
+function shot(L, x1, y1, x2, y2, side, delay, hit) {
+  if (L.shots.length > 160) return;
+  L.shots.push({ x1, y1, x2, y2, side, t: -delay, life: .11, hit });
 }
 function moveDots(dt) {
   const L = ui.match, sim = L.sim, lay = L.layout;
@@ -2073,75 +2099,205 @@ function moveDots(dt) {
   sim.sides.forEach((s, si) => s.players.forEach(p => {
     const d = L.dots[p.id];
     if (!p.alive) { d.alive = false; return; }
-    if (!d.alive) { const sp = lay.spawns[si][d.k]; d.x = sp.x; d.y = sp.y; d.alive = true; d.path = []; d.key = ""; }
+    if (!d.alive) { const sp = lay.spawns[si][d.k]; d.x = sp.x; d.y = sp.y; d.alive = true; d.path = []; d.key = ""; d.hit = 0; }
+    const ox = d.x, oy = d.y;
     if (sim.mode === "OVL" && sim.carrier === p.id) {
-      // Le porteur suit l'engin sur son couloir.
       const dist = Math.hypot(dev.x - d.x, dev.y - d.y), st = Math.min(dist, RUN * 2 * gdt + .001);
       if (dist > 0) { d.x += (dev.x - d.x) / dist * st; d.y += (dev.y - d.y) / dist * st; }
-      d.path = []; return;
+      d.path = [];
+    } else {
+      if (d.key !== key || now >= d.next || !d.goal) { retarget(L, d); d.key = key; d.next = now + 2 + Math.random() * 3; }
+      let budget = RUN * gdt;
+      while (budget > 0 && d.path.length) {
+        const t = d.path[0], dist = Math.hypot(t.x - d.x, t.y - d.y);
+        if (dist <= budget) { d.x = t.x; d.y = t.y; budget -= dist; d.path.shift(); }
+        else { d.x += (t.x - d.x) / dist * budget; d.y += (t.y - d.y) / dist * budget; budget = 0; }
+      }
     }
-    if (d.key !== key || now >= d.next || !d.goal) { retarget(L, d); d.key = key; d.next = now + 2 + Math.random() * 3; }
-    let budget = RUN * gdt;
-    while (budget > 0 && d.path.length) {
-      const t = d.path[0], dist = Math.hypot(t.x - d.x, t.y - d.y);
-      if (dist <= budget) { d.x = t.x; d.y = t.y; budget -= dist; d.path.shift(); }
-      else { d.x += (t.x - d.x) / dist * budget; d.y += (t.y - d.y) / dist * budget; budget = 0; }
-    }
+    if (Math.hypot(d.x - ox, d.y - oy) > .01) d.mv = Math.atan2(d.y - oy, d.x - ox);
   }));
-  for (const t of L.tracers) t.life -= dt;
-  L.tracers = L.tracers.filter(t => t.life > 0);
-  for (const id in L.dots) { const d = L.dots[id]; if (d.dt > 0) d.dt -= dt; }
+  // Échanges de tirs quand deux adversaires se voient à courte distance.
+  if (gdt > 0) {
+    const A = Object.values(L.dots).filter(d => d.alive && d.side === 0), B = Object.values(L.dots).filter(d => d.alive && d.side === 1);
+    for (const a of A) for (const b of B) {
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (dist > 26 || Math.random() > dt * 1.1) continue;
+      if (!los(lay, a, b)) continue;
+      const [s, t, side] = Math.random() < .5 ? [a, b, 0] : [b, a, 1];
+      s.aim = Math.atan2(t.y - s.y, t.x - s.x); s.aimT = 1;
+      t.aim = Math.atan2(s.y - t.y, s.x - t.x); t.aimT = 1;
+      const n = 2 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) shot(L, s.x, s.y, t.x + (Math.random() - .5) * 5, t.y + (Math.random() - .5) * 5, side, i * .07, false);
+      if (Math.random() < .6) shot(L, t.x, t.y, s.x + (Math.random() - .5) * 5, s.y + (Math.random() - .5) * 5, 1 - side, .1, false);
+    }
+  }
+  for (const id in L.dots) {
+    const d = L.dots[id];
+    if (d.dt > 0) d.dt -= dt;
+    if (d.hit > 0) d.hit -= dt;
+    if (d.aimT > 0) d.aimT -= dt;
+    if (d.recoil > 0) d.recoil -= dt;
+    const want = d.aimT > 0 ? d.aim : d.mv;
+    if (want != null) { let da = want - (d.ang || 0); da = Math.atan2(Math.sin(da), Math.cos(da)); d.ang = (d.ang || 0) + da * Math.min(1, dt * 12); }
+  }
+  for (const s of L.shots) s.t += dt;
+  L.shots = L.shots.filter(s => s.t < s.life + .25);
+  for (const k of L.kfeed) k.life -= dt;
+  L.kfeed = L.kfeed.filter(k => k.life > 0);
+}
+
+/* ---------- Rendu de la carte : fond texturé pré-calculé, puis objectifs, tirs, joueurs, fil des kills ---------- */
+const THEMES = {
+  urbain: { ground: "#1a2125", slab: "#222b30", road: "#262f35", mark: "#c9b458", roof: ["#34424b", "#2c3840"], rim: "#4b5d68", patch: "#2a3a2c", prop: "#5c4a33" },
+  hacienda: { ground: "#2a2218", slab: "#31281c", road: "#3a2f21", mark: "#d8c79a", roof: ["#6a3a2a", "#57301f"], rim: "#8a5038", patch: "#3b4626", prop: "#6b5233" },
+  japon: { ground: "#1c2320", slab: "#222b26", road: "#2a312c", mark: "#d6d0c0", roof: ["#3a2724", "#2f201d"], rim: "#8c3a34", patch: "#2b3d2a", prop: "#5a4630" },
+  industriel: { ground: "#1b1f22", slab: "#22272b", road: "#292f33", mark: "#e0a23a", roof: ["#3e4448", "#353a3e"], rim: "#596066", patch: "#2b2f25", prop: "#7a5a2a" },
+  rural: { ground: "#1f241a", slab: "#262c1f", road: "#33301f", mark: "#cfc59a", roof: ["#4a3a2a", "#3c2f22"], rim: "#6e5640", patch: "#33462a", prop: "#6a5234" },
+  desert: { ground: "#28241c", slab: "#2f2a20", road: "#383124", mark: "#e3d5a8", roof: ["#4f4a40", "#454036"], rim: "#6f685a", patch: "#3b3a26", prop: "#6e5636" },
+};
+const MAP_THEME = { Sake: "japon", Hacienda: "hacienda", Gridlock: "urbain", Den: "urbain", Raid: "urbain", Colossus: "industriel", Scar: "industriel", Exposure: "desert", Fringe: "rural" };
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16); const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * f)))); return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function renderBg(L, W, H, dpr) {
+  const cv = document.createElement("canvas"); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const sx = W / 100, sy = H / 60, lay = L.layout, th = THEMES[MAP_THEME[L.sim.map] || "urbain"];
+  const r = seedRand(L.sim.map + "#tex");
+  g.fillStyle = th.ground; g.fillRect(0, 0, W, H);
+  // Dalles au sol
+  for (let x = 0; x < 100; x += 5) for (let y = 0; y < 60; y += 5) { g.fillStyle = r() < .5 ? "rgba(255,255,255,.018)" : "rgba(0,0,0,.05)"; g.fillRect(x * sx + .5, y * sy + .5, 5 * sx - 1, 5 * sy - 1); }
+  g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 1;
+  for (let x = 0; x <= 100; x += 5) { g.beginPath(); g.moveTo(x * sx, 0); g.lineTo(x * sx, H); g.stroke(); }
+  for (let y = 0; y <= 60; y += 5) { g.beginPath(); g.moveTo(0, y * sy); g.lineTo(W, y * sy); g.stroke(); }
+  // Herbe et terre
+  for (let i = 0; i < 9; i++) { const x = r() * 100, y = r() * 60, rad = (5 + r() * 9) * sx; const gr = g.createRadialGradient(x * sx, y * sy, 0, x * sx, y * sy, rad); gr.addColorStop(0, th.patch + "cc"); gr.addColorStop(1, th.patch + "00"); g.fillStyle = gr; g.fillRect(x * sx - rad, y * sy - rad, rad * 2, rad * 2); }
+  // Grain
+  for (let i = 0; i < 2600; i++) { g.fillStyle = r() < .5 ? `rgba(255,255,255,${.015 + r() * .03})` : `rgba(0,0,0,${.04 + r() * .06})`; const s = .6 + r() * 1.4; g.fillRect(r() * W, r() * H, s, s); }
+  // Route principale le long du couloir central, avec marquage
+  g.strokeStyle = th.road; g.lineWidth = 6 * sy; g.lineCap = "round"; g.lineJoin = "round";
+  g.beginPath(); lay.lane.forEach((p, i) => i ? g.lineTo(p.x * sx, p.y * sy) : g.moveTo(p.x * sx, p.y * sy)); g.stroke();
+  g.strokeStyle = th.mark + "55"; g.lineWidth = 1.2; g.setLineDash([8, 9]);
+  g.beginPath(); lay.lane.forEach((p, i) => i ? g.lineTo(p.x * sx, p.y * sy) : g.moveTo(p.x * sx, p.y * sy)); g.stroke(); g.setLineDash([]);
+  // Zones de spawn teintées
+  const [ca, cb] = L.colors;
+  for (const [x0, c] of [[0, ca], [92, cb]]) { const gr = g.createLinearGradient(x0 ? W : 0, 0, x0 ? 92 * sx : 8 * sx, 0); gr.addColorStop(0, c + "30"); gr.addColorStop(1, c + "00"); g.fillStyle = gr; g.fillRect(x0 * sx, 0, 8 * sx, H); }
+  // Ombres des bâtiments
+  g.fillStyle = "rgba(0,0,0,.42)";
+  for (const b of lay.blocks) g.fillRect((b.x + .9) * sx, (b.y + 1.2) * sy, b.w * sx, b.h * sy);
+  // Toits
+  lay.blocks.forEach((b, i) => {
+    const x = b.x * sx, y = b.y * sy, w = b.w * sx, h = b.h * sy;
+    const base = th.roof[i % 2];
+    const gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, shade(base.startsWith("#") ? base : "#333333", 1.18)); gr.addColorStop(1, shade(base, .85));
+    g.fillStyle = gr; g.fillRect(x, y, w, h);
+    g.strokeStyle = th.rim; g.lineWidth = 1.5; g.strokeRect(x + .75, y + .75, w - 1.5, h - 1.5);
+    g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 1; g.strokeRect(x + 3.5, y + 3.5, w - 7, h - 7);
+    const kind = Math.floor(r() * 4);
+    g.save(); g.beginPath(); g.rect(x + 2, y + 2, w - 4, h - 4); g.clip();
+    if (kind === 0) { g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 1; for (let k = x; k < x + w; k += Math.max(3, sx * .8)) { g.beginPath(); g.moveTo(k, y); g.lineTo(k, y + h); g.stroke(); } }
+    else if (kind === 1) { for (let k = 0; k < 2 + r() * 3; k++) { const ux = x + 4 + r() * (w - 14), uy = y + 4 + r() * (h - 12); g.fillStyle = "rgba(0,0,0,.35)"; g.fillRect(ux + 1.5, uy + 1.5, sx * 2, sy * 1.6); g.fillStyle = "#59666d"; g.fillRect(ux, uy, sx * 2, sy * 1.6); g.strokeStyle = "rgba(0,0,0,.4)"; g.strokeRect(ux + .5, uy + .5, sx * 2 - 1, sy * 1.6 - 1); } }
+    else if (kind === 2) { g.fillStyle = "rgba(160,200,220,.10)"; for (let k = x + 5; k < x + w - 6; k += sx * 2.6) for (let m = y + 5; m < y + h - 6; m += sy * 2.6) g.fillRect(k, m, sx * 1.4, sy * 1.4); }
+    else { g.strokeStyle = th.mark + "66"; g.lineWidth = 3; for (let k = -h; k < w; k += 10) { g.beginPath(); g.moveTo(x + k, y + h); g.lineTo(x + k + h, y); g.stroke(); } g.fillStyle = shade(base, .9); g.fillRect(x + 6, y + 6, w - 12, h - 12); }
+    g.restore();
+  });
+  // Caisses, barils et sacs de sable sur des cases libres
+  for (let i = 0; i < 26; i++) {
+    const p = snap(lay, 8 + r() * 84, 4 + r() * 52), t = r();
+    if (Math.abs(p.y - 30) < 4 && r() < .7) continue;
+    const x = p.x * sx, y = p.y * sy;
+    if (t < .45) { const s = sx * 1.7; g.fillStyle = "rgba(0,0,0,.4)"; g.fillRect(x - s / 2 + 1.5, y - s / 2 + 2, s, s); g.fillStyle = th.prop; g.fillRect(x - s / 2, y - s / 2, s, s); g.strokeStyle = "rgba(0,0,0,.45)"; g.lineWidth = 1; g.strokeRect(x - s / 2 + .5, y - s / 2 + .5, s - 1, s - 1); g.beginPath(); g.moveTo(x - s / 2, y - s / 2); g.lineTo(x + s / 2, y + s / 2); g.moveTo(x + s / 2, y - s / 2); g.lineTo(x - s / 2, y + s / 2); g.stroke(); }
+    else if (t < .7) { const rad = sx * .75; for (const [dx, dy] of [[0, 0], [rad * 1.9, rad * .3]]) { g.fillStyle = "rgba(0,0,0,.4)"; g.beginPath(); g.arc(x + dx + 1.5, y + dy + 2, rad, 0, 7); g.fill(); g.fillStyle = "#4d5a3c"; g.beginPath(); g.arc(x + dx, y + dy, rad, 0, 7); g.fill(); g.strokeStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.arc(x + dx, y + dy, rad * .55, 0, 7); g.stroke(); } }
+    else { g.fillStyle = "#6d6450"; for (let k = 0; k < 4; k++) { g.beginPath(); g.ellipse(x + k * sx * 1.05, y, sx * .6, sy * .45, 0, 0, 7); g.fill(); } g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = .8; for (let k = 0; k < 4; k++) { g.beginPath(); g.ellipse(x + k * sx * 1.05, y, sx * .6, sy * .45, 0, 0, 7); g.stroke(); } }
+  }
+  // Vignette
+  const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .7);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)"); g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  return cv;
+}
+function gunGlyph(g, x, y, s, color) {
+  // Petite silhouette d'arme dessinée à la main (originale) pour le fil des kills.
+  g.fillStyle = color;
+  g.fillRect(x, y - s * .25, s * 1.5, s * .32);          // canon et corps
+  g.fillRect(x + s * .25, y + s * .02, s * .28, s * .45); // poignée
+  g.fillRect(x + s * .75, y + s * .02, s * .22, s * .32); // chargeur
+  g.fillRect(x - s * .45, y - s * .2, s * .45, s * .26);  // crosse
 }
 function draw() {
   const L = ui.match, cv = $("#arena"); if (!cv) return;
   const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
   if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const key = `${W}x${H}x${dpr}|${L.sim.map}|${L.ser.maps.length}`;
+  if (!L.bg || L.bgKey !== key) { L.bg = renderBg(L, W, H, dpr); L.bgKey = key; }
+  const g = cv.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(L.bg, 0, 0); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const sx = W / 100, sy = H / 60;
-  g.fillStyle = "#0a1114"; g.fillRect(0, 0, W, H);
-  g.strokeStyle = "rgba(143,163,170,.07)"; g.lineWidth = 1;
-  for (let x = 0; x <= 100; x += 5) { g.beginPath(); g.moveTo(x * sx, 0); g.lineTo(x * sx, H); g.stroke(); }
-  for (let y = 0; y <= 60; y += 5) { g.beginPath(); g.moveTo(0, y * sy); g.lineTo(W, y * sy); g.stroke(); }
-  g.fillStyle = "#1a2a31"; g.strokeStyle = "#2a3d45";
-  for (const b of L.layout.blocks) { g.fillRect(b.x * sx, b.y * sy, b.w * sx, b.h * sy); g.strokeRect(b.x * sx + .5, b.y * sy + .5, b.w * sx - 1, b.h * sy - 1); }
   const [ca, cb] = L.colors, col = i => i === 0 ? ca : cb;
-  const sim = L.sim;
+  const sim = L.sim, small = W < 560;
   g.font = `800 ${Math.max(11, W / 45)}px "Big Shoulders Display", Impact, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
   let devAt = null;
   if (sim.mode === "HP") {
-    L.layout.hills.forEach((h, i) => { g.strokeStyle = i === sim.hill ? "#eaf0f1" : "rgba(234,240,241,.12)"; g.setLineDash(i === sim.hill ? [] : [3, 4]); g.lineWidth = i === sim.hill ? 2 : 1; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.stroke(); });
+    L.layout.hills.forEach((h, i) => { if (i === sim.hill) return; g.strokeStyle = "rgba(234,240,241,.14)"; g.setLineDash([3, 4]); g.lineWidth = 1; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.stroke(); });
     g.setLineDash([]);
-    const h = L.layout.hills[sim.hill];
-    if (sim.holder >= 0) { g.fillStyle = col(sim.holder) + "40"; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.fill(); }
-    if (sim.hillT >= 50) { const n = L.layout.hills[(sim.hill + 1) % 5]; g.fillStyle = "rgba(234,240,241,.5)"; g.fillText(`P${(sim.hill + 1) % 5 + 1} dans ${60 - sim.hillT}s`, n.x * sx, (n.y + 8) * sy); }
-    g.fillStyle = "#eaf0f1"; g.fillText(`P${sim.hill + 1}`, h.x * sx, (h.y - 8) * sy);
+    const h = L.layout.hills[sim.hill], hc = sim.holder >= 0 ? col(sim.holder) : "#eaf0f1";
+    g.fillStyle = (sim.holder >= 0 ? hc : "#eaf0f1") + "2e"; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.fill();
+    g.strokeStyle = hc; g.lineWidth = 2.5; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx, 0, 7); g.stroke();
+    if (sim.holder >= 0) { g.strokeStyle = hc; g.lineWidth = 4; g.beginPath(); g.arc(h.x * sx, h.y * sy, 6 * sx + 4, -Math.PI / 2, -Math.PI / 2 + (sim.hillT / 60) * Math.PI * 2); g.stroke(); }
+    if (sim.hillT >= 50) { const n = L.layout.hills[(sim.hill + 1) % 5]; g.fillStyle = "rgba(234,240,241,.6)"; g.fillText(`P${(sim.hill + 1) % 5 + 1} dans ${60 - sim.hillT}s`, n.x * sx, (n.y + 8) * sy); }
+    g.fillStyle = "#eaf0f1"; g.fillText(`P${sim.hill + 1}`, h.x * sx, (h.y - 8.5) * sy);
   } else if (sim.mode === "SND") {
-    for (const k of ["A", "B"]) { const s = L.layout.sites[k]; const act = sim.planted && sim.site === k; g.strokeStyle = act ? "#ff7a6b" : "#8fa3aa"; g.lineWidth = act ? 2.5 : 1.5; g.strokeRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy); g.fillStyle = act ? "#ff7a6b" : "#8fa3aa"; g.fillText(k, (s.x - 7.5) * sx, s.y * sy); }
-    if (sim.planted) { const s = L.layout.sites[sim.site]; const left = Math.max(0, 45 - (sim.rt - sim.plantT)); g.fillStyle = "#ff7a6b"; g.beginPath(); g.arc(s.x * sx, s.y * sy, 4, 0, 7); g.fill(); g.fillText(`${left}s`, s.x * sx, (s.y + 8) * sy); }
+    for (const k of ["A", "B"]) {
+      const s = L.layout.sites[k]; const act = sim.planted && sim.site === k;
+      g.fillStyle = act ? "rgba(255,122,107,.16)" : "rgba(234,240,241,.05)"; g.fillRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy);
+      g.strokeStyle = act ? "#ff7a6b" : "#aebcc1"; g.lineWidth = act ? 2.5 : 1.5; g.strokeRect((s.x - 5) * sx, (s.y - 5) * sy, 10 * sx, 10 * sy);
+      g.fillStyle = act ? "#ff7a6b" : "#aebcc1"; g.fillText(k, (s.x - 7.5) * sx, s.y * sy);
+    }
+    if (sim.planted) { const s = L.layout.sites[sim.site]; const left = Math.max(0, 45 - (sim.rt - sim.plantT)); const pulse = .5 + .5 * Math.sin(performance.now() / (left < 10 ? 70 : 160)); g.fillStyle = `rgba(255,122,107,${.5 + pulse * .5})`; g.beginPath(); g.arc(s.x * sx, s.y * sy, 4 + pulse * 2, 0, 7); g.fill(); g.fillStyle = "#ff7a6b"; g.fillText(`${left}s`, s.x * sx, (s.y + 8) * sy); }
   } else {
     for (const [gx, side] of [[2, 0], [98, 1]]) { g.fillStyle = col(side) + "33"; g.fillRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); g.strokeStyle = col(side); g.lineWidth = 2; g.strokeRect((gx - 2) * sx, 22 * sy, 4 * sx, 16 * sy); }
-    g.strokeStyle = "rgba(234,240,241,.14)"; g.setLineDash([4, 5]); g.lineWidth = 1; g.beginPath(); L.layout.lane.forEach((p, i) => i ? g.lineTo(p.x * sx, p.y * sy) : g.moveTo(p.x * sx, p.y * sy)); g.stroke(); g.setLineDash([]);
     const cd = sim.carrier && L.dots[sim.carrier];
     devAt = cd && cd.alive ? { x: cd.x, y: cd.y - 2.6 } : lanePoint(L.layout, sim.x);
   }
-  for (const t of L.tracers) { g.strokeStyle = col(t.side); g.globalAlpha = Math.min(1, t.life * 2.2); g.lineWidth = 1.6; g.beginPath(); g.moveTo(t.x1 * sx, t.y1 * sy); g.lineTo(t.x2 * sx, t.y2 * sy); g.stroke(); }
-  g.globalAlpha = 1;
+  // Tirs : traînée lumineuse, flash au canon, étincelle à l'impact
+  g.lineCap = "round";
+  for (const s of L.shots) {
+    if (s.t < 0) continue;
+    const p = Math.min(1, s.t / s.life);
+    const hx = s.x1 + (s.x2 - s.x1) * p, hy = s.y1 + (s.y2 - s.y1) * p;
+    const tl = Math.max(0, p - .35), tx = s.x1 + (s.x2 - s.x1) * tl, ty = s.y1 + (s.y2 - s.y1) * tl;
+    if (s.t <= s.life) {
+      g.strokeStyle = col(s.side); g.globalAlpha = .55; g.lineWidth = 2.6; g.beginPath(); g.moveTo(tx * sx, ty * sy); g.lineTo(hx * sx, hy * sy); g.stroke();
+      g.strokeStyle = "#fff6d0"; g.globalAlpha = .95; g.lineWidth = 1.1; g.beginPath(); g.moveTo(tx * sx, ty * sy); g.lineTo(hx * sx, hy * sy); g.stroke();
+      if (s.t < .05) { g.globalAlpha = 1 - s.t / .05; g.fillStyle = "#ffe08a"; g.beginPath(); g.arc(s.x1 * sx, s.y1 * sy, 3.2, 0, 7); g.fill(); }
+    } else if (s.hit) {
+      const a = 1 - (s.t - s.life) / .25; g.globalAlpha = Math.max(0, a); g.strokeStyle = "#ffd36b"; g.lineWidth = 1.2;
+      for (let k = 0; k < 5; k++) { const an = k * 1.26 + s.x1, rr = 2 + (1 - a) * 5; g.beginPath(); g.moveTo(s.x2 * sx, s.y2 * sy); g.lineTo(s.x2 * sx + Math.cos(an) * rr, s.y2 * sy + Math.sin(an) * rr); g.stroke(); }
+    }
+  }
+  g.globalAlpha = 1; g.lineCap = "butt";
+  // Joueurs
   const r = Math.max(4, W / 120);
-  const small = W < 560;
   const labels = [];
   for (const id in L.dots) {
     const d = L.dots[id];
-    if (!d.alive) { if (d.dt > 0) { g.strokeStyle = col(d.side); g.globalAlpha = Math.min(sim.mode === "SND" ? .7 : 1, d.dt); g.lineWidth = 2; g.beginPath(); g.moveTo(d.dx * sx - r, d.dy * sy - r); g.lineTo(d.dx * sx + r, d.dy * sy + r); g.moveTo(d.dx * sx + r, d.dy * sy - r); g.lineTo(d.dx * sx - r, d.dy * sy + r); g.stroke(); g.globalAlpha = 1; } continue; }
-    g.fillStyle = col(d.side); g.beginPath(); g.arc(d.x * sx, d.y * sy, r, 0, 7); g.fill();
+    if (!d.alive) {
+      if (d.dt > 0) { g.strokeStyle = col(d.side); g.globalAlpha = Math.min(sim.mode === "SND" ? .75 : 1, d.dt); g.lineWidth = 2.2; g.beginPath(); g.moveTo(d.dx * sx - r, d.dy * sy - r); g.lineTo(d.dx * sx + r, d.dy * sy + r); g.moveTo(d.dx * sx + r, d.dy * sy - r); g.lineTo(d.dx * sx - r, d.dy * sy + r); g.stroke(); g.globalAlpha = 1; }
+      continue;
+    }
+    const x = d.x * sx, y = d.y * sy, ang = d.ang || 0;
+    // cône de vision
+    g.fillStyle = col(d.side) + "1c"; g.beginPath(); g.moveTo(x, y); g.arc(x, y, r * 5.5, ang - .45, ang + .45); g.closePath(); g.fill();
+    // canon
+    const kick = d.recoil > 0 ? d.recoil * 4 : 0;
+    g.strokeStyle = "#e9eef0"; g.lineWidth = 2; g.beginPath(); g.moveTo(x + Math.cos(ang) * r * .6, y + Math.sin(ang) * r * .6); g.lineTo(x + Math.cos(ang) * (r * 1.9 - kick), y + Math.sin(ang) * (r * 1.9 - kick)); g.stroke();
+    g.fillStyle = "rgba(0,0,0,.4)"; g.beginPath(); g.arc(x + 1, y + 1.5, r, 0, 7); g.fill();
+    g.fillStyle = d.hit > 0 ? "#ffffff" : col(d.side); g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
     g.strokeStyle = d.side === L.side ? "#eaf0f1" : "#0a1114"; g.lineWidth = 1.5; g.stroke();
     labels.push(d);
   }
-  // Noms des joueurs au-dessus de leur point
-  g.font = `600 ${small ? 9.5 : 11}px Barlow, "Segoe UI", sans-serif`; g.textBaseline = "bottom";
+  // Noms
+  g.font = `600 ${small ? 9.5 : 11}px Barlow, "Segoe UI", sans-serif`; g.textBaseline = "bottom"; g.textAlign = "center";
   const placed = [];
   labels.sort((a, b) => a.y - b.y);
   for (const d of labels) {
-    const tx = d.x * sx, w = g.measureText(d.name).width + 8, hgt = small ? 13 : 15;
+    const w = g.measureText(d.name).width + 8, hgt = small ? 13 : 15, tx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, d.x * sx));
     let ty = d.y * sy - r - 3;
     for (let k = 0; k < 6; k++) { const hit = placed.find(q => Math.abs(q.x - tx) < (q.w + w) / 2 && Math.abs(q.y - ty) < hgt); if (!hit) break; ty = hit.y - hgt; }
     placed.push({ x: tx, y: ty, w });
@@ -2154,6 +2310,24 @@ function draw() {
     g.fillStyle = sim.holder >= 0 ? "#eaf0f1" : "#f5a524"; g.strokeStyle = "#0a1114"; g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(ex, ey - 6); g.lineTo(ex + 6, ey); g.lineTo(ex, ey + 6); g.lineTo(ex - 6, ey); g.closePath(); g.fill(); g.stroke();
   }
+  // Fil des kills en haut à droite de la carte
+  const fs = small ? 9 : 12, rowH = fs + (small ? 6 : 9), maxRows = small ? 3 : 5;
+  g.font = `700 ${fs}px Barlow, "Segoe UI", sans-serif`; g.textBaseline = "middle"; g.textAlign = "left";
+  L.kfeed.slice(0, maxRows).forEach((k, i) => {
+    const gw = fs * 2.1, wk = g.measureText(k.k).width, wv = g.measureText(k.v).width;
+    const mul = k.multi ? (k.multi === 2 ? " ×2" : " ×3") : "";
+    const wm = mul ? g.measureText(mul).width + 4 : 0;
+    const w = wk + gw + wv + wm + 22, x = W - w - 8, y = 8 + i * (rowH + 3);
+    if (small && k.life < 2) return;
+    g.globalAlpha = Math.min(1, k.life);
+    g.fillStyle = "rgba(8,13,15,.82)"; g.fillRect(x, y, w, rowH);
+    g.fillStyle = col(k.ks); g.fillRect(x, y, 3, rowH);
+    g.fillStyle = col(k.ks); g.fillText(k.k, x + 9, y + rowH / 2 + .5);
+    gunGlyph(g, x + 9 + wk + 7, y + rowH / 2, fs * .62, "#d7dee0");
+    g.fillStyle = col(k.vs); g.fillText(k.v, x + 9 + wk + gw + 6, y + rowH / 2 + .5);
+    if (mul) { g.fillStyle = "#f5a524"; g.fillText(mul, x + 9 + wk + gw + 6 + wv + 4, y + rowH / 2 + .5); }
+  });
+  g.globalAlpha = 1; g.textAlign = "center";
 }
 function loop(ts) {
   const L = ui.match; if (!L) return;
