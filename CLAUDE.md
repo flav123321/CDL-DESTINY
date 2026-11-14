@@ -14,8 +14,3 @@ Jeu publié avec GitHub Pages depuis la racine de `main`. Les fichiers à la rac
 - Ne pas modifier `source/` pour un autre jeu : CDL Destiny garde son propre moteur.
 - Chaque jeu a un `id` unique dans `jeu.json` : il sépare sauvegardes et caches sur le même site.
 
-## Rugby Carrière
-
-- `rugby-carriere/` est un jeu à part (carrière de rugbyman, Top 14), sans étape de build : le dossier publié est aussi le code source.
-- Tests : `cd rugby-carriere && npm test`. À chaque mise à jour, augmente `version` dans `package.json` ET le nom du cache dans `sw.js` (un test le vérifie).
-- Plan et conception : `rugby-carriere/docs/`.
